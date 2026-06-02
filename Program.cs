@@ -117,6 +117,10 @@ builder.Services.AddHttpClient<BitacoraClientService>(ConfigureApiClient)
     .AddHttpMessageHandler<EnviaBearerDelegatingHandler>()
     .AddHttpMessageHandler<RefrescaTokenDelegatingHandler>();
 
+builder.Services.AddHttpClient<PedidosClientService>(ConfigureApiClient)
+    .AddHttpMessageHandler<EnviaBearerDelegatingHandler>()
+    .AddHttpMessageHandler<RefrescaTokenDelegatingHandler>();
+
 var app = builder.Build();
 
 app.UseForwardedHeaders();

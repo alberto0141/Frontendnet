@@ -1,3 +1,4 @@
+using System.Net;
 using frontendnet.Extensions;
 using frontendnet.Models;
 using frontendnet.Security;
@@ -10,12 +11,24 @@ namespace frontendnet;
 [Authorize(Roles = AppRoles.User)]
 public class CarritoController(
     ProductosClientService productos,
+    PedidosClientService pedidos,
     ILogger<CarritoController> logger
 ) : Controller
 {
     private const string CarritoKey = "carrito";
     private const int CantidadMin = 1;
     private const int CantidadMax = 99;
+
+    private static class ActionNames
+    {
+        public const string Logout = "Salir";
+    }
+
+    private static class ControllerNames
+    {
+        public const string Auth = "Auth";
+        public const string Pedidos = "Pedidos";
+    }
 
     [HttpGet]
     public IActionResult Index()
@@ -89,6 +102,55 @@ public class CarritoController(
     {
         GuardarCarrito([]);
         return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ConfirmarCompra(CancellationToken cancellationToken)
+    {
+        var carrito = LeerCarrito();
+
+        if (carrito.Count == 0)
+        {
+            TempData["Error"] = "El carrito está vacío. Agrega productos antes de confirmar.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        Pedido? pedido;
+
+        try
+        {
+            pedido = await pedidos.CrearAsync(
+                new ResumenCarrito { Items = carrito },
+                cancellationToken
+            );
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            return RedirectToAction(ActionNames.Logout, ControllerNames.Auth);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.BadRequest)
+        {
+            logger.LogWarning(ex, "Pedido rechazado por validación del backend.");
+            TempData["Error"] = "Algunos productos no están disponibles. Revisa tu carrito.";
+            return RedirectToAction(nameof(Index));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error al crear pedido.");
+            TempData["Error"] = "No fue posible procesar el pedido. Inténtelo nuevamente.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        GuardarCarrito([]);
+        TempData["Exito"] = "¡Pedido creado correctamente!";
+
+        if (pedido?.Id > 0)
+        {
+            return RedirectToAction("Detalle", ControllerNames.Pedidos, new { id = pedido.Id });
+        }
+
+        return RedirectToAction("Index", ControllerNames.Pedidos);
     }
 
     private List<CarritoItem> LeerCarrito() =>

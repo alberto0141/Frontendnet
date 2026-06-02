@@ -16,6 +16,12 @@ public static class ApiRoutes
     public const string Categories = "api/categorias";
     public const string Products = "api/productos";
 
+    public const string Pedidos = "api/pedidos";
+    public const string MisPedidos = "api/pedidos/mios";
+
+    public static string PedidoById(int id) => $"{Pedidos}/{id}";
+    public static string PedidoEstadoById(int id) => $"{PedidoById(id)}/estado";
+
     public static string UserByEmail(string email)
     {
         return $"{Users}/{Uri.EscapeDataString(email)}";
