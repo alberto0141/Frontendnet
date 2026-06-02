@@ -27,6 +27,17 @@ var cookieSecurePolicy = builder.Environment.IsDevelopment()
 
 builder.Services.AddHttpContextAccessor();
 
+builder.Services.AddDistributedMemoryCache();
+
+builder.Services.AddSession(options =>
+{
+    options.Cookie.Name = "frontendnet.session";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.Cookie.SecurePolicy = cookieSecurePolicy;
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+});
+
 builder.Services.Configure<FormOptions>(options =>
 {
     options.MultipartBodyLengthLimit = FileValidation.MaxFileSizeBytes;
@@ -154,6 +165,8 @@ app.Use(async (context, next) =>
 app.UseStaticFiles();
 
 app.UseRouting();
+
+app.UseSession();
 
 app.UseAuthentication();
 app.UseAuthorization();
