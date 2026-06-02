@@ -1,0 +1,82 @@
+@model Producto
+
+<div class="form-floating mb-3">
+    <select asp-for="ArchivoId"
+            id="ArchivoId"
+            asp-items="ViewBag.Archivo"
+            class="form-select"
+            aria-describedby="archivoHelp">
+        <option value="">Seleccione una imagen</option>
+    </select>
+
+    <label for="ArchivoId" class="form-label">
+        @Html.DisplayNameFor(model => model.ArchivoId)
+    </label>
+
+    <span asp-validation-for="ArchivoId" class="text-danger"></span>
+
+    <div id="archivoHelp" class="form-text small">
+        Seleccione la imagen que representará al producto.
+    </div>
+</div>
+
+<div class="form-floating mb-3">
+    <input asp-for="Titulo"
+           id="Titulo"
+           type="text"
+           placeholder="Título"
+           class="form-control"
+           maxlength="120"
+           aria-describedby="tituloHelp" />
+
+    <label for="Titulo" class="form-label">
+        @Html.DisplayNameFor(model => model.Titulo)
+    </label>
+
+    <span asp-validation-for="Titulo" class="text-danger"></span>
+
+    <div id="tituloHelp" class="form-text small">
+        Ingrese el nombre o título del producto.
+    </div>
+</div>
+
+<div class="form-floating mb-3">
+    <textarea asp-for="Descripcion"
+              id="Descripcion"
+              placeholder="Descripción"
+              class="form-control producto-textarea"
+              maxlength="1000"
+              aria-describedby="descripcionHelp"></textarea>
+
+    <label for="Descripcion" class="form-label">
+        @Html.DisplayNameFor(model => model.Descripcion)
+    </label>
+
+    <span asp-validation-for="Descripcion" class="text-danger"></span>
+
+    <div id="descripcionHelp" class="form-text small">
+        Describa las características principales del producto.
+    </div>
+</div>
+
+<div class="form-floating mb-3">
+    <input asp-for="Precio"
+           id="Precio"
+           type="number"
+           min="0.01"
+           step="0.01"
+           inputmode="decimal"
+           placeholder="Precio"
+           class="form-control"
+           aria-describedby="precioHelp" />
+
+    <label for="Precio" class="form-label">
+        @Html.DisplayNameFor(model => model.Precio)
+    </label>
+
+    <span asp-validation-for="Precio" class="text-danger"></span>
+
+    <div id="precioHelp" class="form-text small">
+        Ingrese un precio mayor a cero.
+    </div>
+</div>

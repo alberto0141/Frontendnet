@@ -1,0 +1,121 @@
+@model IEnumerable<Pedido>
+
+@{
+    var lista = Model?.ToList() ?? [];
+    var mostrarUsuario = ViewData["MostrarUsuario"] is true;
+
+    var msgExito = TempData["Exito"] as string;
+    var msgError  = TempData["Error"] as string;
+
+    static string FormatFecha(DateTime fecha) => fecha.ToString("dd/MM/yyyy HH:mm");
+
+    static string BadgeClase(string estado) => estado switch
+    {
+        "PENDIENTE"  => "bg-warning text-dark",
+        "EN_PROCESO" => "bg-info text-dark",
+        "ENVIADO"    => "bg-primary",
+        "ENTREGADO"  => "bg-success",
+        "CANCELADO"  => "bg-danger",
+        _            => "bg-secondary"
+    };
+}
+
+@if (!string.IsNullOrEmpty(msgExito))
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @msgExito
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(msgError))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @msgError
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+    </div>
+}
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-warning" role="alert">
+        @Html.ValidationSummary(excludePropertyErrors: true, message: null, htmlAttributes: new { @class = "mb-0" })
+    </div>
+}
+
+<div class="row small mb-3">
+    <div class="col text-end text-muted">
+        Mostrando @lista.Count pedido(s)
+    </div>
+</div>
+
+@if (lista.Count > 0)
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle small">
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">#</th>
+                    @if (mostrarUsuario)
+                    {
+                        <th scope="col">Usuario</th>
+                    }
+                    <th scope="col">Fecha</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col" class="text-end">Total</th>
+                    <th scope="col"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var pedido in lista)
+                {
+                    <tr>
+                        <td>@pedido.Id</td>
+                        @if (mostrarUsuario)
+                        {
+                            <td class="text-nowrap">
+                                @(string.IsNullOrWhiteSpace(pedido.EmailUsuario) ? "—" : pedido.EmailUsuario)
+                            </td>
+                        }
+                        <td class="text-nowrap">@FormatFecha(pedido.CreadoEn)</td>
+                        <td>
+                            <span class="badge @BadgeClase(pedido.Estado)">
+                                @pedido.Estado
+                            </span>
+                        </td>
+                        <td class="text-end text-nowrap fw-semibold">
+                            @pedido.Total.ToString("C")
+                        </td>
+                        <td class="text-center">
+                            <a asp-controller="Pedidos"
+                               asp-action="Detalle"
+                               asp-route-id="@pedido.Id"
+                               class="btn btn-sm btn-outline-primary">
+                                Ver detalle
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <div class="mt-5">
+        <div class="alert @(mostrarUsuario ? "alert-warning" : "alert-info")" role="alert">
+            @if (mostrarUsuario)
+            {
+                <text>No se encontraron pedidos.</text>
+            }
+            else
+            {
+                <text>Aún no tienes pedidos.
+                    <a asp-controller="Comprar" asp-action="Index" class="alert-link">
+                        ¡Empieza a comprar!
+                    </a>
+                </text>
+            }
+        </div>
+    </div>
+}
