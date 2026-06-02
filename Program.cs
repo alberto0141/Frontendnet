@@ -22,9 +22,17 @@ if (!Uri.TryCreate(apiBaseUrl, UriKind.Absolute, out var apiUri))
     throw new InvalidOperationException("UrlWebAPI no está configurada correctamente.");
 }
 
-if (!builder.Environment.IsDevelopment() && apiUri.Scheme != Uri.UriSchemeHttps)
+var isInternalDockerApi =
+    apiUri.Scheme == Uri.UriSchemeHttp &&
+    string.Equals(apiUri.Host, "backend", StringComparison.OrdinalIgnoreCase);
+
+if (!builder.Environment.IsDevelopment() &&
+    apiUri.Scheme != Uri.UriSchemeHttps &&
+    !isInternalDockerApi)
 {
-    throw new InvalidOperationException("UrlWebAPI debe usar HTTPS en producción.");
+    throw new InvalidOperationException(
+        "UrlWebAPI debe usar HTTPS en producción o usar el host interno backend dentro de Docker."
+    );
 }
 
 var cookieSecurePolicy = builder.Environment.IsDevelopment()
