@@ -56,13 +56,21 @@ public class ProductosClientService(HttpClient client)
     {
         ValidateProducto(producto);
 
+        var body = new
+        {
+            titulo = producto.Titulo,
+            descripcion = producto.Descripcion,
+            precio = producto.Precio,
+            archivoid = producto.ArchivoId
+        };
+
         using var response = await client.PostAsJsonAsync(
             ApiRoutes.Products,
-            producto,
+            body,
             cancellationToken
         );
 
-        response.EnsureSuccessStatusCode();
+        await ApiClientHelper.LanzarSiErrorAsync(response, cancellationToken);
     }
 
     public async Task PutAsync(
@@ -73,13 +81,21 @@ public class ProductosClientService(HttpClient client)
         ValidateProducto(producto);
         ValidateId(producto.ProductoId, nameof(producto.ProductoId));
 
+        var body = new
+        {
+            titulo = producto.Titulo,
+            descripcion = producto.Descripcion,
+            precio = producto.Precio,
+            archivoid = producto.ArchivoId
+        };
+
         using var response = await client.PutAsJsonAsync(
             ApiRoutes.ProductById(producto.ProductoId),
-            producto,
+            body,
             cancellationToken
         );
 
-        response.EnsureSuccessStatusCode();
+        await ApiClientHelper.LanzarSiErrorAsync(response, cancellationToken);
     }
 
     public async Task DeleteAsync(

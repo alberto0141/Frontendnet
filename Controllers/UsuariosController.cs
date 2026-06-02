@@ -154,6 +154,13 @@ public class UsuariosController(
         {
             return Forbid();
         }
+        catch (ApiClientException ex)
+        {
+            logger.LogError(ex, "Backend rechazó la creación del usuario {Email}.", itemToCreate.Email);
+            ApiErrorHelper.AgregarErrores(ModelState, ex, nameof(UsuarioPwd.Email), ErrorMessages.GenericActionError);
+            await RolesDropDownListAsync(itemToCreate.Rol, cancellationToken);
+            return View(itemToCreate);
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error al crear el usuario {Email}.", itemToCreate.Email);
@@ -246,6 +253,14 @@ public class UsuariosController(
         catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
         {
             return Forbid();
+        }
+        catch (ApiClientException ex)
+        {
+            logger.LogError(ex, "Backend rechazó la edición del usuario {Email}.", itemToEdit.Email);
+            ApiErrorHelper.AgregarErrores(ModelState, ex, nameof(Usuario.Email), ErrorMessages.GenericActionError);
+            await RolesDropDownListAsync(itemToEdit.Rol, cancellationToken);
+            ViewBag.PuedeEditar = User.Identity?.Name != itemToEdit.Email;
+            return View(itemToEdit);
         }
         catch (Exception ex)
         {

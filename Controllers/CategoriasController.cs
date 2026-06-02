@@ -135,6 +135,12 @@ public class CategoriasController(
         {
             return Forbid();
         }
+        catch (ApiClientException ex)
+        {
+            logger.LogError(ex, "Backend rechazó la creación de categoría.");
+            ApiErrorHelper.AgregarErrores(ModelState, ex, nameof(Categoria.Nombre), ErrorMessages.GenericActionError);
+            return View(itemToCreate);
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error al crear una categoría.");
@@ -222,6 +228,12 @@ public class CategoriasController(
         catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
         {
             return Forbid();
+        }
+        catch (ApiClientException ex)
+        {
+            logger.LogError(ex, "Backend rechazó la edición de categoría {CategoriaId}.", id);
+            ApiErrorHelper.AgregarErrores(ModelState, ex, nameof(Categoria.Nombre), ErrorMessages.GenericActionError);
+            return View(itemToEdit);
         }
         catch (Exception ex)
         {
