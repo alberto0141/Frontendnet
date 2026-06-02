@@ -1,8 +1,20 @@
+@using Microsoft.AspNetCore.Http
+
 @{
+    Context.Response.StatusCode = StatusCodes.Status500InternalServerError;
     ViewData["Title"] = "Aplicación no disponible";
 }
 
-<div class="container">
-    <h1 class="text-danger">@ViewData["Title"]</h1>
-    <p class="text-muted">La aplicación se encuentra no disponible. Inténtelo nuevamente más tarde.</p>
+<div class="container py-5">
+    <div class="alert alert-danger" role="alert">
+        <h1 class="h4">@ViewData["Title"]</h1>
+        <p class="mb-0">
+            La aplicación no se encuentra disponible en este momento.
+            Inténtelo nuevamente más tarde.
+        </p>
+    </div>
+
+    <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary">
+        Volver al inicio
+    </a>
 </div>

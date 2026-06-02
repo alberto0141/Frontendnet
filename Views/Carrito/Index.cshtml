@@ -1,17 +1,39 @@
+@model IEnumerable<Producto>
+
 @{
     ViewData["Title"] = "Carrito de compras";
     ViewData["SubTitle"] = "Listado";
+
+    var productos = Model?.Where(producto => producto is not null).ToList() ?? [];
 }
-<h2 class="text-center mb-3">@ViewData["Title"] <small class="text-muted fs-5">@ViewData["SubTitle"]</small></h2>
+
+<h2 class="text-center mb-3">
+    @ViewData["Title"]
+    <small class="text-muted fs-5">@ViewData["SubTitle"]</small>
+</h2>
 
 <div class="row small mb-3">
     <div class="col text-end">
-        Mostrando 0 elementos
+        Mostrando @productos.Count elementos
     </div>
 </div>
 
-<div class="mt-5">
-    <div class="alert alert-warning" role="alert">
-        No se han encontrado elementos. Inténtelo de nuevo más tarde.
+@if (productos.Count > 0)
+{
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+        @foreach (var item in productos)
+        {
+            <div class="col">
+                <partial name="_CardPartial" model="item" />
+            </div>
+        }
     </div>
-</div>
+}
+else
+{
+    <div class="mt-5">
+        <div class="alert alert-warning" role="alert">
+            No se han encontrado elementos. Inténtelo de nuevo más tarde.
+        </div>
+    </div>
+}

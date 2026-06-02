@@ -1,38 +1,71 @@
-@model AuthUser
+@model PerfilUsuario
+
 @{
-    ViewData["Title"] = "Perfil de usuario";
-    ViewData["SubTitle"] = "Perfil";
+    ViewData["Title"] = "Perfil";
+    ViewData["SubTitle"] = "Información de cuenta";
+
+    var hasValidModel = Model is not null &&
+                        !string.IsNullOrWhiteSpace(Model.Email) &&
+                        !string.IsNullOrWhiteSpace(Model.Nombre);
+
+    var email = string.IsNullOrWhiteSpace(Model?.Email)
+        ? "No disponible"
+        : Model.Email.Trim();
+
+    var nombre = string.IsNullOrWhiteSpace(Model?.Nombre)
+        ? "No disponible"
+        : Model.Nombre.Trim();
 }
 
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb small">
-    <li class="breadcrumb-item active" aria-current="page">@ViewData["SubTitle"]</li>
+        <li class="breadcrumb-item active" aria-current="page">
+            @ViewData["SubTitle"]
+        </li>
     </ol>
 </nav>
 
-<h2 class="text-center mb-3">@ViewData["Title"]</h2>
+<h2 class="text-center mb-3">
+    @ViewData["Title"]
+    <small class="text-muted fs-5">@ViewData["SubTitle"]</small>
+</h2>
 
-<div class="card mt-3">
-    <div class="card-body">
-    <div class="mb-3 ps-3">
-        <label asp-for="Email" class="form-label form-text"></label>
-        <div class="form-text text-body">@Model.Email</div>
+@if (!hasValidModel)
+{
+    <div class="alert alert-warning" role="alert">
+        No fue posible cargar la información del perfil.
     </div>
-    <div class="mb-3 ps-3">
-        <label asp-for="Nombre" class="form-label form-text"></label>
-        <div class="form-text text-body">@Model.Nombre</div>
+}
+else
+{
+    <div class="card mt-3">
+        <div class="card-body">
+            <div class="mb-3 ps-3">
+                <span class="form-label form-text d-block">
+                    Correo electrónico
+                </span>
+                <div class="form-text text-body">
+                    @email
+                </div>
+            </div>
+
+            <div class="mb-3 ps-3">
+                <span class="form-label form-text d-block">
+                    Nombre
+                </span>
+                <div class="form-text text-body">
+                    @nombre
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="mb-3 ps-3">
-        <label asp-for="Rol" class="form-label form-text"></label>
-        <div class="form-text text-body">@Model.Rol</div>
-    </div>
-    <div class="mb-3 ps-3 small">
-        <label asp-for="Jwt" class="form-label form-text"></label>
-        <div class="form-text text-body">@Model.Jwt</div>
-    </div>
-    <div class="mb-3 ps-3">
-        <label class="form-label form-text">Tiempo restante</label>
-        <div class="form-text text-body">@ViewBag.timeRemaining</div>
-    </div>
-    </div>
+}
+
+<div class="text-center mt-3">
+    <a class="btn btn-sm btn-outline-secondary"
+       asp-controller="Home"
+       asp-action="Index"
+       title="Volver al inicio">
+        Volver al inicio
+    </a>
 </div>

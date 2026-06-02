@@ -21,3 +21,41 @@ html[data-bs-theme="light"] body {
   height: 25px;
   width: 100px;
 }
+
+.archivo-detalle-img {
+    max-height: 300px;
+    object-fit: contain;
+}
+
+.login-card {
+    max-width: 500px;
+}
+
+.carrito-card-img {
+    max-height: 200px;
+    object-fit: contain;
+}
+
+.comprar-card-img {
+    max-height: 200px;
+    object-fit: contain;
+}
+
+.home-carousel-img {
+    max-height: 420px;
+    object-fit: cover;
+}
+
+.producto-card-img {
+    max-height: 200px;
+    object-fit: contain;
+}
+
+.producto-form-img {
+    max-height: 300px;
+    object-fit: contain;
+}
+
+.producto-textarea {
+    min-height: 120px;
+}

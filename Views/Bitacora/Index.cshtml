@@ -1,70 +1,93 @@
-@model List<Bitacora>
+@model IEnumerable<Bitacora>
+
 @{
     ViewData["Title"] = "Bitácora";
     ViewData["SubTitle"] = "Listado";
+
+    var registros = Model?.ToList() ?? [];
+
+    static string SafeText(string? value, int maxLength = 120)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "No disponible";
+        }
+
+        var normalizedValue = value.Trim();
+
+        return normalizedValue.Length > maxLength
+            ? $"{normalizedValue[..maxLength]}..."
+            : normalizedValue;
+    }
+
+    static string FormatDate(DateTime? value)
+    {
+        return value.HasValue
+            ? value.Value.ToString("dd/MM/yyyy HH:mm:ss")
+            : "No disponible";
+    }
 }
 
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb small">
-        <li class="breadcrumb-item active" aria-current="page">@ViewData["SubTitle"]</li>
+        <li class="breadcrumb-item active" aria-current="page">
+            @ViewData["SubTitle"]
+        </li>
     </ol>
 </nav>
 
-<h2 class="text-center mb-3">@ViewData["Title"] <small class="text-muted fs-5">@ViewData["SubTitle"]</small></h2>
+<h2 class="text-center mb-3">
+    @ViewData["Title"]
+    <small class="text-muted fs-5">@ViewData["SubTitle"]</small>
+</h2>
 
 <div class="row small mb-3">
     <div class="col text-end">
-        Mostrando @Model.Count() elementos
+        Mostrando @registros.Count elementos
     </div>
 </div>
 
-@if (Model.Count() > 0)
+@if (registros.Count > 0)
 {
     <div class="table-responsive">
-        <table class="table table-striped table-bordered small">
-            <thead class="text-center">
+        <table class="table table-striped table-bordered align-middle small">
+            <thead>
                 <tr>
-                    <th>
-                        @Html.DisplayNameFor(model => model.First().BitacoraId)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.First().Accion)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.First().ElementoId)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.First().IP)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.First().Usuario)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.First().Fecha)
-                    </th>
+                    <th scope="col">Id</th>
+                    <th scope="col">Acción</th>
+                    <th scope="col">Elemento Id</th>
+                    <th scope="col">IP</th>
+                    <th scope="col">Usuario</th>
+                    <th scope="col">Fecha</th>
                 </tr>
             </thead>
+
             <tbody>
-                @foreach (var item in Model)
+                @foreach (var item in registros)
                 {
                     <tr>
                         <td>
-                            @Html.DisplayFor(modelItem => item.BitacoraId)
+                            @(item.BitacoraId?.ToString() ?? "No disponible")
                         </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.Accion)
+
+                        <td title="@SafeText(item.Accion, 500)">
+                            @SafeText(item.Accion)
                         </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.ElementoId)
+
+                        <td title="@SafeText(item.ElementoId, 500)">
+                            @SafeText(item.ElementoId)
                         </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.IP)
+
+                        <td title="@SafeText(item.IP, 100)">
+                            @SafeText(item.IP, 45)
                         </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.Usuario)
+
+                        <td title="@SafeText(item.Usuario, 500)">
+                            @SafeText(item.Usuario)
                         </td>
+
                         <td>
-                            @TimeZoneInfo.ConvertTimeBySystemTimeZoneId(Convert.ToDateTime(item.Fecha), "America/Mexico_City")
+                            @FormatDate(item.Fecha)
                         </td>
                     </tr>
                 }
@@ -74,9 +97,7 @@
 }
 else
 {
-    <div class="mt-5">
-        <div class="alert alert-warning" role="alert">
-            No se han encontrado elementos. Inténtelo de nuevo más tarde.
-        </div>
+    <div class="alert alert-warning" role="alert">
+        No se encontraron elementos. Inténtelo de nuevo más tarde.
     </div>
 }

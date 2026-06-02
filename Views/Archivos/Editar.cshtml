@@ -1,51 +1,158 @@
+@using frontendnet.Models.Validation
 @model Upload
+
 @{
     ViewData["Title"] = "Archivos";
     ViewData["SubTitle"] = "Editar";
+
+    var archivoIdText = Convert.ToString(Model?.ArchivoId ?? ViewBag.ArchivoId);
+    var archivoId = 0;
+    var hasValidArchivoId = int.TryParse(archivoIdText, out archivoId) && archivoId > 0;
+
+    var currentFileName = string.IsNullOrWhiteSpace(Model?.Nombre)
+        ? Convert.ToString(ViewBag.Nombre)
+        : Model.Nombre;
+
+    currentFileName = string.IsNullOrWhiteSpace(currentFileName)
+        ? "Archivo actual"
+        : currentFileName;
+
+    var configuredUrl = Convert.ToString(ViewBag.Url);
+
+    Uri? baseUri = null;
+    var hasValidBaseUrl = Uri.TryCreate(configuredUrl, UriKind.Absolute, out baseUri);
+
+    var baseUrl = hasValidBaseUrl && baseUri is not null
+        ? baseUri.ToString().TrimEnd('/')
+        : string.Empty;
+
+    var imageUrl = hasValidArchivoId && !string.IsNullOrWhiteSpace(baseUrl)
+        ? $"{baseUrl}/api/archivos/{archivoId}"
+        : Url.Content("~/images/logo.png");
+        
+    var maxFileSizeMb = FileValidation.MaxFileSizeBytes / (1024 * 1024);
+    var allowedExtensions = string.Join(
+        ", ",
+        FileValidation.AllowedExtensions.Select(extension => extension.TrimStart('.').ToUpperInvariant())
+    );
 }
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    <script src="~/js/portada.js"></script>
+    <script src="~/js/portada.js" asp-append-version="true"></script>
 }
 
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb small">
-        <li class="breadcrumb-item"><a class="text-decoration-none" title="Regresar al listado" asp-action="Index">Listado</a></li>
-        <li class="breadcrumb-item active" aria-current="page">@ViewData["SubTitle"]</li>
+        <li class="breadcrumb-item">
+            <a class="text-decoration-none"
+               title="Regresar al listado"
+               asp-action="Index">
+                Listado
+            </a>
+        </li>
+        <li class="breadcrumb-item active" aria-current="page">
+            @ViewData["SubTitle"]
+        </li>
     </ol>
 </nav>
 
-<h2 class="text-center mb-3">@ViewData["Title"] <small class="text-muted fs-5">@ViewData["SubTitle"]</small></h2>
+<h2 class="text-center mb-3">
+    @ViewData["Title"]
+    <small class="text-muted fs-5">@ViewData["SubTitle"]</small>
+</h2>
 
-<form asp-action="Editar" enctype="multipart/form-data">
-    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-    <div class="card mt-3">
-        <div class="row g-0">
-            <div class="col-md-4">
-                <img src="@(ViewBag.Url)/api/archivos/@(ViewBag.ArchivoId)" alt="@ViewBag.Nombre"
-                     class="portada img-fluid img-thumbnail mt-2 ms-2" style="max-height: 300px;">
-            </div>
-            <div class="col-md-8">
-                <div class="card-body small">
-                    <div class="form-floating mb-3">
-                        <input asp-for="ArchivoId" placeholder="ArchivoId" readonly class="form-control-plaintext" value="@ViewBag.ArchivoId" />
-                        <label asp-for="ArchivoId" class="form-label"></label>
-                    </div>
-                    <div class="form-floating mb-3">
-                        <input asp-for="Portada" accept=".jpg" placeholder="Titulo" class="form-control" />
-                        <label asp-for="Portada" class="form-label"></label>
-                        <span asp-validation-for="Portada" class="text-danger"></span>
-                        <div class="form-text small">Tamprecio máximo permitido es 100 KB</div>
-                        <div class="form-text small">Las extensiones permitidas son (jpg)</div>
+@if (!hasValidArchivoId)
+{
+    <div class="alert alert-warning" role="alert">
+        No fue posible cargar la información del archivo.
+    </div>
+
+    <div class="text-center mt-3">
+        <a class="btn btn-sm btn-outline-secondary"
+           asp-action="Index"
+           title="Cancelar">
+            Cancelar
+        </a>
+    </div>
+}
+else
+{
+    <form asp-action="Editar"
+          asp-route-id="@archivoId"
+          method="post"
+          enctype="multipart/form-data"
+          autocomplete="off">
+        @Html.AntiForgeryToken()
+
+        <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+
+        <div class="card mt-3">
+            <div class="row g-0">
+                <div class="col-md-4 text-center p-3">
+                    <img src="@imageUrl"
+                         alt="@currentFileName"
+                         class="portada img-fluid img-thumbnail mt-2 ms-2 archivo-detalle-img"
+                         loading="lazy"
+                         decoding="async">
+                </div>
+
+                <div class="col-md-8">
+                    <div class="card-body small">
+                        <div class="form-floating mb-3">
+                            <input asp-for="ArchivoId"
+                                   id="ArchivoId"
+                                   value="@archivoId"
+                                   placeholder="ArchivoId"
+                                   readonly
+                                   class="form-control-plaintext"
+                                   aria-describedby="archivoIdHelp" />
+
+                            <label for="ArchivoId" class="form-label">
+                                @Html.DisplayNameFor(model => model.ArchivoId)
+                            </label>
+
+                            <div id="archivoIdHelp" class="form-text small">
+                                Identificador del archivo actual.
+                            </div>
+                        </div>
+
+                        <div class="form-floating mb-3">
+                            <input asp-for="Portada"
+                                   id="Portada"
+                                   type="file"
+                                   accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                   class="form-control"
+                                   aria-describedby="portadaHelp" />
+
+                            <label for="Portada" class="form-label">
+                                @Html.DisplayNameFor(model => model.Portada)
+                            </label>
+
+                            <span asp-validation-for="Portada" class="text-danger"></span>
+
+                            <div id="portadaHelp" class="form-text small">
+                                Tamaño máximo permitido: @maxFileSizeMb MB.
+                                Extensiones permitidas: @allowedExtensions.
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="text-center mt-3">
-        <button id="btnEnviar" type="submit" class="btn btn-sm btn-primary">Guardar</button>
-        <a class="btn btn-sm btn-outline-secondary" asp-action="Index" title="Cancelar">Cancelar</a>
-    </div>
-</form>
+        <div class="text-center mt-3">
+            <button id="btnEnviar"
+                    type="submit"
+                    class="btn btn-sm btn-primary">
+                Guardar
+            </button>
+
+            <a class="btn btn-sm btn-outline-secondary"
+               asp-action="Index"
+               title="Cancelar">
+                Cancelar
+            </a>
+        </div>
+    </form>
+}

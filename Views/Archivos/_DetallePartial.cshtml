@@ -1,32 +1,93 @@
 @model Archivo
 
+@{
+    var hasValidModel = Model is not null && Model.ArchivoId.HasValue && Model.ArchivoId.Value > 0;
+
+    var fileName = string.IsNullOrWhiteSpace(Model?.Nombre)
+        ? "Archivo sin nombre"
+        : Model.Nombre;
+
+    var mime = string.IsNullOrWhiteSpace(Model?.Mime)
+        ? "No disponible"
+        : Model.Mime;
+
+    var sizeKb = Model?.Size is > 0
+        ? $"{Model.Size.Value / 1024:N0} KB"
+        : "No disponible";
+
+    var storage = Model?.InDb == true
+        ? "Base de datos"
+        : "Archivos";
+
+    var configuredUrl = Convert.ToString(ViewBag.Url);
+
+    Uri? baseUri = null;
+    var hasValidBaseUrl = Uri.TryCreate(configuredUrl, UriKind.Absolute, out baseUri);
+
+    var baseUrl = hasValidBaseUrl && baseUri is not null
+        ? baseUri.ToString().TrimEnd('/')
+        : string.Empty;
+
+    var imageUrl = hasValidModel && !string.IsNullOrWhiteSpace(baseUrl)
+        ? $"{baseUrl}/api/archivos/{Model!.ArchivoId!.Value}"
+        : Url.Content("~/images/logo.png");
+}
+
 <div class="card mt-3">
     <div class="row g-0">
-        <div class="col-md-4">
-            <img src="@(ViewBag.Url)/api/archivos/@(Model.ArchivoId)" alt="@Model.Nombre"
-                 class="img-fluid img-thumbnail mt-2 ms-2" style="max-height: 300px;">
+        <div class="col-md-4 text-center p-3">
+            <img src="@imageUrl"
+                 alt="@fileName"
+                 class="img-fluid img-thumbnail archivo-detalle-img"
+                 loading="lazy"
+                 decoding="async">
         </div>
+
         <div class="col-md-8">
             <div class="card-body">
                 <div class="mb-3 ps-3">
-                    <label asp-for="ArchivoId" class="form-label form-text"></label>
-                    <div class="form-text text-body">@Model.ArchivoId</div>
+                    <span class="form-label form-text d-block">
+                        @Html.DisplayNameFor(model => model.ArchivoId)
+                    </span>
+                    <div class="form-text text-body">
+                        @(Model?.ArchivoId?.ToString() ?? "No disponible")
+                    </div>
                 </div>
+
                 <div class="mb-3 ps-3">
-                    <label asp-for="Nombre" class="form-label form-text"></label>
-                    <div class="form-text text-body">@Model.Nombre</div>
+                    <span class="form-label form-text d-block">
+                        @Html.DisplayNameFor(model => model.Nombre)
+                    </span>
+                    <div class="form-text text-body">
+                        @fileName
+                    </div>
                 </div>
+
                 <div class="mb-3 ps-3">
-                    <label asp-for="Mime" class="form-label form-text"></label>
-                    <div class="form-text text-body">@Model.Mime</div>
+                    <span class="form-label form-text d-block">
+                        @Html.DisplayNameFor(model => model.Mime)
+                    </span>
+                    <div class="form-text text-body">
+                        @mime
+                    </div>
                 </div>
+
                 <div class="mb-3 ps-3">
-                    <label asp-for="Size" class="form-label form-text"></label>
-                    <div class="form-text text-body">@(Model.Size/1024) KB</div>
+                    <span class="form-label form-text d-block">
+                        @Html.DisplayNameFor(model => model.Size)
+                    </span>
+                    <div class="form-text text-body">
+                        @sizeKb
+                    </div>
                 </div>
+
                 <div class="mb-3 ps-3">
-                    <label asp-for="InDb" class="form-label form-text"></label>
-                    <div class="form-text text-body">@(Model.InDb ? "Base de datos" : "Archivos")</div>
+                    <span class="form-label form-text d-block">
+                        @Html.DisplayNameFor(model => model.InDb)
+                    </span>
+                    <div class="form-text text-body">
+                        @storage
+                    </div>
                 </div>
             </div>
         </div>

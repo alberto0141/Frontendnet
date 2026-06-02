@@ -1,20 +1,89 @@
 @model Producto
 
-<div class="card h-100">
-    <img src="@((Model.ArchivoId == null) ? "https://placeholder.co/300x200/FFF/999?text=Artículo" : $"{ViewBag.Url}/api/archivos/{Model.ArchivoId}")"
-         alt="@Model.Titulo" class="portada card-img-top" data-url="@ViewBag.Url" style="max-height: 200px;">
-    <div class="card-body d-flex flex-column">
-        <p class="card-text">@Model.Titulo</p>
-        <h5 class="card-title">@Html.DisplayFor(model => model.Precio)</h5>
-        <p class="card-text">
-            @foreach (var cat in Model.Categorias!)
+@{
+    static string SafeText(string? value, int maxLength = 120)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "No disponible";
+        }
+
+        var normalizedValue = value.Trim();
+
+        return normalizedValue.Length > maxLength
+            ? $"{normalizedValue[..maxLength]}..."
+            : normalizedValue;
+    }
+
+    var hasValidProduct = Model is not null && Model.ProductoId > 0;
+    var hasValidFile = Model?.ArchivoId is > 0;
+
+    var title = SafeText(Model?.Titulo);
+    var price = Model?.Precio is > 0
+        ? Model.Precio.ToString("C")
+        : "No disponible";
+
+    var configuredUrl = Convert.ToString(ViewBag.Url);
+    Uri? baseUri = null;
+    var hasValidBaseUrl = Uri.TryCreate(configuredUrl, UriKind.Absolute, out baseUri);
+
+    var imageUrl = hasValidFile && hasValidBaseUrl
+        ? $"{baseUri!.ToString().TrimEnd('/')}/api/archivos/{Model!.ArchivoId}"
+        : Url.Content("~/images/logo.png");
+
+    var categories = Model?.Categorias ?? [];
+}
+
+@if (hasValidProduct)
+{
+    <div class="card h-100">
+        <img src="@imageUrl"
+             alt="@title"
+             class="card-img-top carrito-card-img"
+             loading="lazy"
+             decoding="async">
+
+        <div class="card-body d-flex flex-column">
+            <p class="card-text fw-semibold">
+                @title
+            </p>
+
+            <h5 class="card-title">
+                @price
+            </h5>
+
+            @if (categories.Any())
             {
-                <span class="badge rounded-pill text-bg-warning">@cat.Nombre</span>
+                <p class="card-text">
+                    @foreach (var category in categories)
+                    {
+                        var categoryName = SafeText(category.Nombre, 50);
+
+                        <span class="badge rounded-pill text-bg-warning me-1">
+                            @categoryName
+                        </span>
+                    }
+                </p>
             }
-        </p>
-        <p class="mt-auto card-text text-success fw-semibold small"><i class="bi bi-lightning-fill"></i> Envío gratis</p>
+
+            <p class="mt-auto card-text text-success fw-semibold small">
+                <i class="bi bi-lightning-fill" aria-hidden="true"></i>
+                Envío gratis
+            </p>
+        </div>
+
+        <div class="card-footer text-center">
+            <button type="button"
+                    class="btn btn-sm btn-secondary"
+                    disabled>
+                Pendiente de compra
+            </button>
+        </div>
     </div>
-    <div class="card-footer">
-        <a class="btn btn-primary btn-sm" href="#" role="button">Comprar</a>
+}
+else
+{
+    <div class="alert alert-warning" role="alert">
+        No fue posible cargar este producto.
     </div>
-</div>
+}

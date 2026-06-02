@@ -1,66 +1,136 @@
-@using System.Security.Claims
+@using frontendnet.Security
+
 @{
     ViewData["Title"] = "Página principal";
+
+    var isAuthenticated = User.Identity?.IsAuthenticated == true;
+    var isUser = User.IsInRole(AppRoles.User);
+    var isAdministrator = User.IsInRole(AppRoles.Administrator);
 }
 
-<div style="left: 50%;margin-left:-50vw;position: relative;width: 100vw">
-    <div id="carouselExample" class="carousel slide" style="margin-top: -1rem;">
-        <div class="carousel-indicators">
-            <button type="button" data-bs-target="#carouselExample" data-bs-slide-to="0" class="active"
-                aria-current="true" aria-label="Slide 1"></button>
-            <button type="button" data-bs-target="#carouselExample" data-bs-slide-to="1" aria-label="Slide 2"></button>
-            <button type="button" data-bs-target="#carouselExample" data-bs-slide-to="2" aria-label="Slide 3"></button>
-            <button type="button" data-bs-target="#carouselExample" data-bs-slide-to="3" aria-label="Slide 4"></button>
-        </div>
-        <div class="carousel-inner">
-            <div class="carousel-item active">
-                <img src="~/images/carrusel1.webp" class="d-block w-100" alt="Imagen 1">
-            </div>
-            <div class="carousel-item">
-                <img src="~/images/carrusel2.webp" class="d-block w-100" alt="Imagen 2">
-            </div>
-            <div class="carousel-item">
-                <img src="~/images/carrusel3.webp" class="d-block w-100" alt="Imagen 3">
-            </div>
-            <div class="carousel-item">
-                <img src="~/images/carrusel4.webp" class="d-block w-100" alt="Imagen 4">
-            </div>
-        </div>
-        <button class="carousel-control-prev" type="button" data-bs-target="#carouselExample" data-bs-slide="prev">
-            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Previous</span>
+<div id="mainCarousel"
+     class="carousel slide mb-5"
+     data-bs-ride="carousel"
+     aria-label="Promociones principales">
+    <div class="carousel-indicators">
+        <button type="button"
+                data-bs-target="#mainCarousel"
+                data-bs-slide-to="0"
+                class="active"
+                aria-current="true"
+                aria-label="Promoción 1">
         </button>
-        <button class="carousel-control-next" type="button" data-bs-target="#carouselExample" data-bs-slide="next">
-            <span class="carousel-control-next-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Next</span>
+
+        <button type="button"
+                data-bs-target="#mainCarousel"
+                data-bs-slide-to="1"
+                aria-label="Promoción 2">
+        </button>
+
+        <button type="button"
+                data-bs-target="#mainCarousel"
+                data-bs-slide-to="2"
+                aria-label="Promoción 3">
+        </button>
+
+        <button type="button"
+                data-bs-target="#mainCarousel"
+                data-bs-slide-to="3"
+                aria-label="Promoción 4">
         </button>
     </div>
+
+    <div class="carousel-inner rounded shadow-sm">
+        <div class="carousel-item active">
+            <img src="~/images/carrusel1.webp"
+                 class="d-block w-100 home-carousel-img"
+                 alt="Promoción principal de productos"
+                 loading="eager"
+                 decoding="async">
+        </div>
+
+        <div class="carousel-item">
+            <img src="~/images/carrusel2.webp"
+                 class="d-block w-100 home-carousel-img"
+                 alt="Promoción de tecnología"
+                 loading="lazy"
+                 decoding="async">
+        </div>
+
+        <div class="carousel-item">
+            <img src="~/images/carrusel3.webp"
+                 class="d-block w-100 home-carousel-img"
+                 alt="Promoción de compras en línea"
+                 loading="lazy"
+                 decoding="async">
+        </div>
+
+        <div class="carousel-item">
+            <img src="~/images/carrusel4.webp"
+                 class="d-block w-100 home-carousel-img"
+                 alt="Promoción de envíos"
+                 loading="lazy"
+                 decoding="async">
+        </div>
+    </div>
+
+    <button class="carousel-control-prev"
+            type="button"
+            data-bs-target="#mainCarousel"
+            data-bs-slide="prev"
+            aria-label="Anterior">
+        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+    </button>
+
+    <button class="carousel-control-next"
+            type="button"
+            data-bs-target="#mainCarousel"
+            data-bs-slide="next"
+            aria-label="Siguiente">
+        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+    </button>
 </div>
 
-<div class="container-fluid mt-4">
-    <div class="card">
-        <div class="card-header">
-            Mercado Libre
-        </div>
-        <div class="card-body">
-            <h5 class="card-title">Compre productos con Envío Gratis en Mercado Libre México.</h5>
-            <p class="card-text">Encuentre miles de marcas y productos a precios increíbles.</p>
-            <p class="card-text">Mercado Libre es la mayor plataforma de comercio electrónico de la región, donde millones de compradores y vendedores se encuentran para realizar transacciones con una amplia gama de productos y servicios, a precio fijo.</p>
-            @if (User.Identity?.IsAuthenticated == true)
-            {
-                if (User.FindFirstValue(ClaimTypes.Role) == "Usuario")
-                {
-                    <a asp-controller="Comprar" class="btn btn-primary">Comenzar a comprar</a>
-                }
-                else if (User.FindFirstValue(ClaimTypes.Role) == "Administrador")
-                {
-                    <a asp-controller="Productos" class="btn btn-primary">Administrar catálogo</a>
-                }
-            }
-            else
-            {
-                <a asp-controller="Auth" class="btn btn-primary">Iniciar sesión</a>
-            }
+<section class="text-center">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h1 class="card-title h4">
+                        Compra productos con envío gratis en Mercado Libre FEI
+                    </h1>
+
+                    <p class="card-text text-muted">
+                        Encuentra productos publicados por la tienda, consulta su información,
+                        precio y categorías disponibles.
+                    </p>
+
+                    @if (isAuthenticated && isUser)
+                    {
+                        <a class="btn btn-primary"
+                           asp-controller="Comprar"
+                           asp-action="Index">
+                            Ir a comprar
+                        </a>
+                    }
+                    else if (isAuthenticated && isAdministrator)
+                    {
+                        <a class="btn btn-primary"
+                           asp-controller="Productos"
+                           asp-action="Index">
+                            Administrar productos
+                        </a>
+                    }
+                    else
+                    {
+                        <a class="btn btn-primary"
+                           asp-controller="Auth"
+                           asp-action="Index">
+                            Iniciar sesión
+                        </a>
+                    }
+                </div>
+            </div>
         </div>
     </div>
-</div>
+</section>

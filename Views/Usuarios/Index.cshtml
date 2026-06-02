@@ -1,72 +1,151 @@
-@model List<Usuario>
+@model IEnumerable<Usuario>
+
 @{
     ViewData["Title"] = "Usuarios";
     ViewData["SubTitle"] = "Listado";
+
+    var usuarios = Model?.Where(usuario => usuario is not null).ToList() ?? [];
+
+    static string SafeText(string? value, int maxLength = 120)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "No disponible";
+        }
+
+        var normalizedValue = value.Trim();
+
+        return normalizedValue.Length > maxLength
+            ? $"{normalizedValue[..maxLength]}..."
+            : normalizedValue;
+    }
+
+    static bool HasValidEmail(string? email)
+    {
+        return !string.IsNullOrWhiteSpace(email) && email.Contains('@', StringComparison.Ordinal);
+    }
 }
+
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb small">
-        <li class="breadcrumb-item active" aria-current="page">@ViewData["SubTitle"]</li>
+        <li class="breadcrumb-item active" aria-current="page">
+            @ViewData["SubTitle"]
+        </li>
     </ol>
 </nav>
-<h2 class="text-center mb-3">@ViewData["Title"] <small class="text-muted fs-5">@ViewData["SubTitle"]</small></h2>
+
+<h2 class="text-center mb-3">
+    @ViewData["Title"]
+    <small class="text-muted fs-5">@ViewData["SubTitle"]</small>
+</h2>
+
+<div class="text-end mb-3">
+    <a class="btn btn-sm btn-primary"
+       asp-action="Crear"
+       title="Crear nuevo usuario">
+        Crear nuevo
+    </a>
+</div>
+
 <div class="row small mb-3">
-    <div class="col">
-        <a class="text-decoration-none" asp-action="Crear" title="Crear nuevo">Crear nuevo</a>
-    </div>
     <div class="col text-end">
-        Mostrando @Model.Count() elementos
+        Mostrando @usuarios.Count elementos
     </div>
 </div>
-@if (Model.Count() > 0)
+
+@if (usuarios.Count > 0)
 {
     <div class="table-responsive">
-        <table class="table table-striped table-bordered small">
-            <thead class="text-center">
+        <table class="table table-striped table-bordered align-middle">
+            <thead>
                 <tr>
-                    <th>
-                        @Html.DisplayNameFor(model => model.First().Id)
+                    <th scope="col">
+                        Id
                     </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.First().Email)
+                    <th scope="col">
+                        Email
                     </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.First().Nombre)
+                    <th scope="col">
+                        Nombre
                     </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.First().Rol)
+                    <th scope="col">
+                        Rol
                     </th>
-                    <th></th>
-                    <th></th>
-                    <th></th>
+                    <th scope="col" class="text-center">
+                        Acciones
+                    </th>
                 </tr>
             </thead>
+
             <tbody>
-                @foreach (var item in Model)
+                @foreach (var item in usuarios)
                 {
+                    var email = string.IsNullOrWhiteSpace(item.Email)
+                        ? string.Empty
+                        : item.Email.Trim().ToLowerInvariant();
+
+                    var hasValidEmail = HasValidEmail(email);
+                    var isCurrentUser = string.Equals(User.Identity?.Name, email, StringComparison.OrdinalIgnoreCase);
+
                     <tr>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.Id)
+                        <td title="@SafeText(item.Id, 500)">
+                            @SafeText(item.Id, 80)
                         </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.Email)
+
+                        <td title="@SafeText(item.Email, 500)">
+                            @SafeText(item.Email, 120)
                         </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.Nombre)
+
+                        <td title="@SafeText(item.Nombre, 500)">
+                            @SafeText(item.Nombre, 120)
                         </td>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.Rol)
+
+                        <td title="@SafeText(item.Rol, 500)">
+                            @SafeText(item.Rol, 80)
                         </td>
-                        <td width="1">
-                            <a class="text-decoration-none small text-uppercase" asp-action="Detalle"
-                                    asp-route-id="@item.Email">Detalle</a>
-                        </td>
-                        <td width="1">
-                            <a class="text-decoration-none small text-uppercase" asp-action="Editar"
-                                    asp-route-id="@item.Email">Editar</a>
-                        </td>
-                        <td width="1">
-                            <a class="text-decoration-none small text-uppercase" asp-action="Eliminar"
-                                    asp-route-id="@item.Email">Eliminar</a>
+
+                        <td class="text-center">
+                            @if (hasValidEmail)
+                            {
+                                <a class="btn btn-sm btn-outline-secondary"
+                                   asp-action="Detalle"
+                                   asp-route-id="@email"
+                                   title="Ver detalle">
+                                    Detalle
+                                </a>
+
+                                <a class="btn btn-sm btn-outline-primary"
+                                   asp-action="Editar"
+                                   asp-route-id="@email"
+                                   title="Editar usuario">
+                                    Editar
+                                </a>
+
+                                @if (isCurrentUser)
+                                {
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-secondary"
+                                            disabled
+                                            title="No puede eliminar la cuenta actual">
+                                        Sesión actual
+                                    </button>
+                                }
+                                else
+                                {
+                                    <a class="btn btn-sm btn-outline-danger"
+                                       asp-action="Eliminar"
+                                       asp-route-id="@email"
+                                       title="Eliminar usuario">
+                                        Eliminar
+                                    </a>
+                                }
+                            }
+                            else
+                            {
+                                <span class="text-muted">
+                                    Sin acciones
+                                </span>
+                            }
                         </td>
                     </tr>
                 }
@@ -76,9 +155,7 @@
 }
 else
 {
-    <div class="mt-5">
-        <div class="alert alert-warning" role="alert">
-            No se han encontrado elementos. Inténtelo de nuevo más tarde.
-        </div>
+    <div class="alert alert-warning" role="alert">
+        No se encontraron elementos. Inténtelo de nuevo más tarde.
     </div>
 }
