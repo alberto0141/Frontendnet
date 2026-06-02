@@ -1,7 +1,7 @@
 (function ($) {
     'use strict';
 
-    if (!window.jQuery || !$.validator || !$.validator.unobtrusive) {
+    if (!globalThis.jQuery || !$.validator?.unobtrusive) {
         return;
     }
 
@@ -12,4 +12,4 @@
 
     $.validator.setDefaults(validationSettings);
     $.validator.unobtrusive.options = validationSettings;
-})(window.jQuery);
+})(globalThis.jQuery);
