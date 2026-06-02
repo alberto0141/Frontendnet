@@ -6,21 +6,6 @@
     ViewData["SubTitle"] = "Detalle";
 
     var isAdmin = User.IsInRole(AppRoles.Administrator);
-
-    var msgExito = TempData["Exito"] as string;
-    var msgError  = TempData["Error"] as string;
-
-    static string FormatFecha(DateTime fecha) => fecha.ToString("dd/MM/yyyy HH:mm");
-
-    static string BadgeClase(string estado) => estado switch
-    {
-        "PENDIENTE"  => "bg-warning text-dark",
-        "EN_PROCESO" => "bg-info text-dark",
-        "ENVIADO"    => "bg-primary",
-        "ENTREGADO"  => "bg-success",
-        "CANCELADO"  => "bg-danger",
-        _            => "bg-secondary"
-    };
 }
 
 <nav aria-label="breadcrumb">
@@ -44,28 +29,14 @@
     <small class="text-muted fs-5">@ViewData["SubTitle"]</small>
 </h2>
 
-@if (!string.IsNullOrEmpty(msgExito))
-{
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        @msgExito
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
-    </div>
-}
-
-@if (!string.IsNullOrEmpty(msgError))
-{
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        @msgError
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
-    </div>
-}
+<partial name="_AlertsPartial" />
 
 <div class="row g-3 mb-4">
     <div class="col-sm-6 col-md-3">
         <div class="card text-center h-100">
             <div class="card-body">
                 <p class="card-title text-muted small mb-1">Estado</p>
-                <span class="badge fs-6 @BadgeClase(Model.Estado)">@Model.Estado</span>
+                <span class="badge fs-6 @ViewHelpers.EstadoBadgeClase(Model.Estado)">@Model.Estado</span>
             </div>
         </div>
     </div>
@@ -81,7 +52,7 @@
         <div class="card text-center h-100">
             <div class="card-body">
                 <p class="card-title text-muted small mb-1">Fecha</p>
-                <p class="mb-0 small">@FormatFecha(Model.CreadoEn)</p>
+                <p class="mb-0 small">@ViewHelpers.FormatFecha(Model.CreadoEn)</p>
             </div>
         </div>
     </div>

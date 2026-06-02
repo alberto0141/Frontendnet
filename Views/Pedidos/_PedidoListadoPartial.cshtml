@@ -3,38 +3,9 @@
 @{
     var lista = Model?.ToList() ?? [];
     var mostrarUsuario = ViewData["MostrarUsuario"] is true;
-
-    var msgExito = TempData["Exito"] as string;
-    var msgError  = TempData["Error"] as string;
-
-    static string FormatFecha(DateTime fecha) => fecha.ToString("dd/MM/yyyy HH:mm");
-
-    static string BadgeClase(string estado) => estado switch
-    {
-        "PENDIENTE"  => "bg-warning text-dark",
-        "EN_PROCESO" => "bg-info text-dark",
-        "ENVIADO"    => "bg-primary",
-        "ENTREGADO"  => "bg-success",
-        "CANCELADO"  => "bg-danger",
-        _            => "bg-secondary"
-    };
 }
 
-@if (!string.IsNullOrEmpty(msgExito))
-{
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        @msgExito
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
-    </div>
-}
-
-@if (!string.IsNullOrEmpty(msgError))
-{
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        @msgError
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
-    </div>
-}
+<partial name="_AlertsPartial" />
 
 @if (!ViewData.ModelState.IsValid)
 {
@@ -77,9 +48,9 @@
                                 @(string.IsNullOrWhiteSpace(pedido.EmailUsuario) ? "—" : pedido.EmailUsuario)
                             </td>
                         }
-                        <td class="text-nowrap">@FormatFecha(pedido.CreadoEn)</td>
+                        <td class="text-nowrap">@ViewHelpers.FormatFecha(pedido.CreadoEn)</td>
                         <td>
-                            <span class="badge @BadgeClase(pedido.Estado)">
+                            <span class="badge @ViewHelpers.EstadoBadgeClase(pedido.Estado)">
                                 @pedido.Estado
                             </span>
                         </td>

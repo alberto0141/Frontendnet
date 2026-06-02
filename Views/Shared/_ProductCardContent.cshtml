@@ -1,0 +1,66 @@
+@model Producto
+
+@{
+    var imgClass = ViewData["ImgClass"] as string ?? "card-img-top";
+    var showDescription = ViewData["ShowDescription"] is not false;
+
+    var title = ViewHelpers.SafeText(Model?.Titulo);
+    var description = ViewHelpers.SafeText(Model?.Descripcion, 160);
+
+    var price = Model?.Precio is > 0
+        ? Model.Precio.ToString("C")
+        : "No disponible";
+
+    var configuredUrl = Convert.ToString(ViewBag.Url);
+    Uri? baseUri = null;
+    var hasValidBaseUrl = Uri.TryCreate(configuredUrl, UriKind.Absolute, out baseUri);
+    var hasValidFile = Model?.ArchivoId is > 0;
+
+    var imageUrl = hasValidFile && hasValidBaseUrl
+        ? $"{baseUri!.ToString().TrimEnd('/')}/api/archivos/{Model!.ArchivoId}"
+        : Url.Content("~/images/logo.png");
+
+    var categories = Model?.Categorias ?? [];
+}
+
+<img src="@imageUrl"
+     alt="@title"
+     class="card-img-top @imgClass"
+     loading="lazy"
+     decoding="async">
+
+<div class="card-body d-flex flex-column">
+    <p class="card-text fw-semibold" title="@ViewHelpers.SafeText(Model?.Titulo, 500)">
+        @title
+    </p>
+
+    @if (showDescription)
+    {
+        <p class="card-text small text-muted" title="@ViewHelpers.SafeText(Model?.Descripcion, 500)">
+            @description
+        </p>
+    }
+
+    <h5 class="card-title">
+        @price
+    </h5>
+
+    @if (categories.Any())
+    {
+        <p class="card-text">
+            @foreach (var category in categories)
+            {
+                var categoryName = ViewHelpers.SafeText(category.Nombre, 50);
+
+                <span class="badge rounded-pill text-bg-warning me-1">
+                    @categoryName
+                </span>
+            }
+        </p>
+    }
+
+    <p class="mt-auto card-text text-success fw-semibold small">
+        <i class="bi bi-lightning-fill" aria-hidden="true"></i>
+        Envío gratis
+    </p>
+</div>
