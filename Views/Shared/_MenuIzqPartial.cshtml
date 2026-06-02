@@ -1,0 +1,36 @@
+@using System.Security.Claims
+
+@{
+    var isAuthenticated = User.Identity?.IsAuthenticated == true;
+    var userRole = User.FindFirstValue(ClaimTypes.Role);
+
+    var isUser = string.Equals(userRole, "Usuario", StringComparison.OrdinalIgnoreCase);
+    var isAdmin = string.Equals(userRole, "Administrador", StringComparison.OrdinalIgnoreCase);
+}
+
+<div class="navbar-nav me-auto align-items-center gap-2">
+    @if (isAuthenticated)
+    {
+        if (isUser)
+        {
+            <a class="nav-link" asp-controller="Comprar" asp-action="Index">Comprar</a>
+
+            <a class="nav-link" asp-controller="Carrito" asp-action="Index">
+                <i class="bi bi-cart" aria-hidden="true"></i>
+                Carrito
+            </a>
+        }
+        else if (isAdmin)
+        {
+            <a class="nav-link" asp-controller="Productos" asp-action="Index">Productos</a>
+            <a class="nav-link" asp-controller="Categorias" asp-action="Index">Categorías</a>
+            <a class="nav-link" asp-controller="Archivos" asp-action="Index">Archivos</a>
+            <a class="nav-link" asp-controller="Usuarios" asp-action="Index">Usuarios</a>
+            <a class="nav-link" asp-controller="Bitacora" asp-action="Index">Bitácora</a>
+        }
+    }
+    else
+    {
+        <a class="nav-link" asp-controller="Home" asp-action="Index">Inicio</a>
+    }
+</div>

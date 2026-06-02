@@ -1,5 +1,6 @@
-using System.Security.Claims;
+using System.Net;
 using frontendnet.Models;
+using frontendnet.Security;
 using frontendnet.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -7,368 +8,689 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace frontendnet;
 
-[Authorize(Roles = "Administrador")]
-public class ProductosController(ProductosClientService productos, 
-                               CategoriasClientService categorias, 
-                               ArchivosClientService archivos, 
-                               IConfiguration configuration) : Controller
+[Authorize(Roles = AppRoles.AuthenticatedRoles)]
+public class ProductosController(
+    ProductosClientService productos,
+    CategoriasClientService categorias,
+    ArchivosClientService archivos,
+    IConfiguration configuration,
+    ILogger<ProductosController> logger
+) : Controller
 {
-    public async Task<IActionResult> Index(string? s)
+    private const int SearchMaxLength = 120;
+
+    private static class ConfigurationKeys
     {
-        List<Producto>? lista = [];
-        try
-        {
-            lista = await productos.GetAsync(s);
-        }
-        catch (HttpRequestException ex)
-        {
-            if (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                return RedirectToAction("Salir", "Auth");
-        }
-
-        if (User.FindFirstValue(ClaimTypes.Role) == "Administrador")
-            ViewBag.SoloAdmin = true;
-
-        ViewBag.Url = configuration["UrlWebAPI"];
-        ViewBag.search = s;
-        return View(lista);
+        public const string UrlWebApi = "UrlWebAPI";
     }
 
-    public async Task<IActionResult> Detalle(int id)
+    private static class ActionNames
     {
-        Producto? item = null;
-        ViewBag.Url = configuration["UrlWebAPI"];
-        try
-        {
-            item = await productos.GetAsync(id);
-            if (item == null) return NotFound();
-        }
-        catch (HttpRequestException ex)
-        {
-            if (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                return RedirectToAction("Salir", "Auth");
-        }
-        return View(item);
+        public const string Logout = "Salir";
     }
 
-    public async Task<IActionResult> Crear()
+    private static class ControllerNames
     {
-        await ProductosDropDownListAsync();
-        return View();
+        public const string Auth = "Auth";
+    }
+
+    private static class ViewDataKeys
+    {
+        public const string ErrorMessage = "ErrorMessage";
+        public const string ProductoId = "ProductoId";
+    }
+
+    private static class ErrorMessages
+    {
+        public const string GenericActionError = "No ha sido posible realizar la acción. Inténtelo nuevamente.";
+        public const string GenericLoadError = "No ha sido posible cargar la información. Inténtelo nuevamente.";
+        public const string InvalidId = "El identificador solicitado no es válido.";
+        public const string InvalidPoster = "La URL de la imagen no es válida.";
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Index(
+        string? s,
+        CancellationToken cancellationToken
+    )
+    {
+        SetUrlWebApi();
+
+        var search = NormalizeSearch(s);
+
+        ViewBag.Search = search;
+        ViewBag.SoloAdmin = User.IsInRole(AppRoles.Administrator);
+
+        try
+        {
+            var lista = await productos.GetAsync(search, cancellationToken);
+            return View(lista);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            return RedirectToAction(ActionNames.Logout, ControllerNames.Auth);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
+        {
+            return Forbid();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error al obtener la lista de productos.");
+            ModelState.AddModelError(string.Empty, ErrorMessages.GenericLoadError);
+            return View(new List<Producto>());
+        }
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Detalle(
+        int id,
+        CancellationToken cancellationToken
+    )
+    {
+        if (!IsValidId(id))
+        {
+            return BadRequest(ErrorMessages.InvalidId);
+        }
+
+        SetUrlWebApi();
+
+        try
+        {
+            var item = await productos.GetAsync(id, cancellationToken);
+
+            if (item is null)
+            {
+                return NotFound();
+            }
+
+            return View(item);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            return RedirectToAction(ActionNames.Logout, ControllerNames.Auth);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
+        {
+            return Forbid();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error al consultar el producto con id {ProductoId}.", id);
+            return RedirectToAction(nameof(Index));
+        }
+    }
+
+    [HttpGet]
+    [Authorize(Roles = AppRoles.Administrator)]
+    public async Task<IActionResult> Crear(CancellationToken cancellationToken)
+    {
+        SetUrlWebApi();
+
+        try
+        {
+            await ArchivosDropDownListAsync(null, cancellationToken);
+            return View();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error al cargar la vista de creación de producto.");
+            return RedirectToAction(nameof(Index));
+        }
     }
 
     [HttpPost]
-    public async Task<IActionResult> CrearAsync(Producto itemToCreate)
+    [Authorize(Roles = AppRoles.Administrator)]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Crear(
+        Producto itemToCreate,
+        CancellationToken cancellationToken
+    )
     {
-        ViewBag.Url = configuration["UrlWebAPI"];
-        if (ModelState.IsValid)
+        if (itemToCreate is null)
         {
-            try
-            {
-                await productos.PostAsync(itemToCreate);
-                return RedirectToAction(nameof(Index));
-            }
-            catch (HttpRequestException ex)
-            {
-                if (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                    return RedirectToAction("Salir", "Auth");
-            }
+            return BadRequest();
         }
 
-        await ProductosDropDownListAsync();
-        ModelState.AddModelError("Nombre", "No ha sido posible realizar la acción. Inténtelo nuevamente.");
-        return View(itemToCreate);
-    }
+        SetUrlWebApi();
+        NormalizeProducto(itemToCreate);
 
-    public async Task<IActionResult> EditarAsync(int id)
-    {
-        Producto? itemToEdit = null;
-        ViewBag.Url = configuration["UrlWebAPI"];
+        if (!ModelState.IsValid)
+        {
+            await ArchivosDropDownListAsync(itemToCreate.ArchivoId, cancellationToken);
+            return View(itemToCreate);
+        }
+
         try
         {
-            itemToEdit = await productos.GetAsync(id);
-            if (itemToEdit == null) return NotFound();
+            await productos.PostAsync(itemToCreate, cancellationToken);
+            return RedirectToAction(nameof(Index));
         }
-        catch (HttpRequestException ex)
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
         {
-            if (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                return RedirectToAction("Salir", "Auth");
+            return RedirectToAction(ActionNames.Logout, ControllerNames.Auth);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
+        {
+            return Forbid();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error al crear producto.");
+            ModelState.AddModelError(nameof(Producto.Titulo), ErrorMessages.GenericActionError);
+            await ArchivosDropDownListAsync(itemToCreate.ArchivoId, cancellationToken);
+            return View(itemToCreate);
+        }
+    }
+
+    [HttpGet]
+    [Authorize(Roles = AppRoles.Administrator)]
+    public async Task<IActionResult> Editar(
+        int id,
+        CancellationToken cancellationToken
+    )
+    {
+        if (!IsValidId(id))
+        {
+            return BadRequest(ErrorMessages.InvalidId);
         }
 
-        await ProductosDropDownListAsync();
-        return View(itemToEdit);
+        SetUrlWebApi();
+
+        try
+        {
+            var itemToEdit = await productos.GetAsync(id, cancellationToken);
+
+            if (itemToEdit is null)
+            {
+                return NotFound();
+            }
+
+            await ArchivosDropDownListAsync(itemToEdit.ArchivoId, cancellationToken);
+            return View(itemToEdit);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            return RedirectToAction(ActionNames.Logout, ControllerNames.Auth);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
+        {
+            return Forbid();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error al cargar producto con id {ProductoId} para edición.", id);
+            return RedirectToAction(nameof(Index));
+        }
     }
 
     [HttpPost]
-    public async Task<IActionResult> EditarAsync(int id, Producto itemToEdit)
+    [Authorize(Roles = AppRoles.Administrator)]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Editar(
+        int id,
+        Producto itemToEdit,
+        CancellationToken cancellationToken
+    )
     {
-        if (id != itemToEdit.ProductoId) return NotFound();
-
-        ViewBag.Url = configuration["UrlWebAPI"];
-        if (ModelState.IsValid)
+        if (!IsValidId(id))
         {
-            try
-            {
-                await productos.PutAsync(itemToEdit);
-                return RedirectToAction(nameof(Index));
-            }
-            catch (HttpRequestException ex)
-            {
-                if (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                    return RedirectToAction("Salir", "Auth");
-            }
+            return BadRequest(ErrorMessages.InvalidId);
         }
 
-        await ProductosDropDownListAsync();
-        ModelState.AddModelError("Nombre", "No ha sido posible realizar la acción. Inténtelo nuevamente.");
-        return View(itemToEdit);
-    }
+        if (itemToEdit is null)
+        {
+            return BadRequest();
+        }
 
-    public async Task<IActionResult> Eliminar(int id, bool? showError = false)
-    {
-        Producto? itemToDelete = null;
+        if (id != itemToEdit.ProductoId)
+        {
+            return BadRequest(ErrorMessages.InvalidId);
+        }
+
+        SetUrlWebApi();
+        NormalizeProducto(itemToEdit);
+
+        if (!ModelState.IsValid)
+        {
+            await ArchivosDropDownListAsync(itemToEdit.ArchivoId, cancellationToken);
+            return View(itemToEdit);
+        }
+
         try
         {
-            itemToDelete = await productos.GetAsync(id);
-            if (itemToDelete == null) return NotFound();
+            await productos.PutAsync(itemToEdit, cancellationToken);
+            return RedirectToAction(nameof(Index));
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            return RedirectToAction(ActionNames.Logout, ControllerNames.Auth);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
+        {
+            return Forbid();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error al editar producto con id {ProductoId}.", id);
+            ModelState.AddModelError(nameof(Producto.Titulo), ErrorMessages.GenericActionError);
+            await ArchivosDropDownListAsync(itemToEdit.ArchivoId, cancellationToken);
+            return View(itemToEdit);
+        }
+    }
+
+    [HttpGet]
+    [Authorize(Roles = AppRoles.Administrator)]
+    public async Task<IActionResult> Eliminar(
+        int id,
+        bool? showError = false,
+        CancellationToken cancellationToken = default
+    )
+    {
+        if (!IsValidId(id))
+        {
+            return BadRequest(ErrorMessages.InvalidId);
+        }
+
+        SetUrlWebApi();
+
+        try
+        {
+            var itemToDelete = await productos.GetAsync(id, cancellationToken);
+
+            if (itemToDelete is null)
+            {
+                return NotFound();
+            }
 
             if (showError.GetValueOrDefault())
             {
-                ViewData["ErrorMessage"] = "No ha sido posible realizar la acción. Inténtelo nuevamente.";
+                ViewData[ViewDataKeys.ErrorMessage] = ErrorMessages.GenericActionError;
             }
-        }
-        catch (HttpRequestException ex)
-        {
-            if (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                return RedirectToAction("Salir", "Auth");
-        }
 
-        ViewBag.Url = configuration["UrlWebAPI"];
-        return View(itemToDelete);
+            return View(itemToDelete);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            return RedirectToAction(ActionNames.Logout, ControllerNames.Auth);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
+        {
+            return Forbid();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error al cargar producto con id {ProductoId} para eliminación.", id);
+            return RedirectToAction(nameof(Index));
+        }
     }
 
     [HttpPost]
-    public async Task<IActionResult> Eliminar(int id)
+    [Authorize(Roles = AppRoles.Administrator)]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Eliminar(
+        int id,
+        CancellationToken cancellationToken
+    )
     {
-        ViewBag.Url = configuration["UrlWebAPI"];
-        if (ModelState.IsValid)
+        if (!IsValidId(id))
         {
-            try
-            {
-                await productos.DeleteAsync(id);
-                return RedirectToAction(nameof(Index));
-            }
-            catch (HttpRequestException ex)
-            {
-                if (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                    return RedirectToAction("Salir", "Auth");
-            }
+            return BadRequest(ErrorMessages.InvalidId);
         }
 
-        // En caso de error
-        return RedirectToAction(nameof(Eliminar), new { id, showError = true });
+        SetUrlWebApi();
+
+        try
+        {
+            await productos.DeleteAsync(id, cancellationToken);
+            return RedirectToAction(nameof(Index));
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            return RedirectToAction(ActionNames.Logout, ControllerNames.Auth);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
+        {
+            return Forbid();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error al eliminar producto con id {ProductoId}.", id);
+            return RedirectToAction(nameof(Eliminar), new { id, showError = true });
+        }
     }
 
     [AcceptVerbs("GET", "POST")]
-    public IActionResult ValidaPoster(string Poster)
+    [Authorize(Roles = AppRoles.Administrator)]
+    public IActionResult ValidaPoster(string? poster)
     {
-        if (Uri.IsWellFormedUriString(Poster, UriKind.Absolute) || Poster.Equals("N/A"))
+        if (string.IsNullOrWhiteSpace(poster))
+        {
+            return Json(false);
+        }
+
+        var normalizedPoster = poster.Trim();
+
+        if (string.Equals(normalizedPoster, "N/A", StringComparison.OrdinalIgnoreCase))
+        {
             return Json(true);
+        }
 
-        return Json(false);
+        var isValidUri = Uri.TryCreate(normalizedPoster, UriKind.Absolute, out var uri) &&
+                         (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp);
+
+        return Json(isValidUri);
     }
 
-public async Task<IActionResult> Categorias(int id)
-{
-    Producto? itemToView = null;
-    try
+    [HttpGet]
+    [Authorize(Roles = AppRoles.Administrator)]
+    public async Task<IActionResult> Categorias(
+        int id,
+        CancellationToken cancellationToken
+    )
     {
-        itemToView = await productos.GetAsync(id);
-        if (itemToView == null) return NotFound();
-    }
-    catch (HttpRequestException ex)
-    {
-        if (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-            return RedirectToAction("Salir", "Auth");
-    }
-    ViewData["ProductoId"] = itemToView?.ProductoId;
-    ViewBag.Url = configuration["UrlWebAPI"];
-    return View(itemToView);
-}
+        if (!IsValidId(id))
+        {
+            return BadRequest(ErrorMessages.InvalidId);
+        }
 
-public async Task<IActionResult> CategoriasAgregar(int id)
-{
-    ProductoCategoria? itemToView = null;
-    try
-    {
-        Producto? producto = await productos.GetAsync(id);
-        if (producto == null) return NotFound();
+        SetUrlWebApi();
 
-        await CategoriasDropDownListAsync();
-        itemToView = new ProductoCategoria { Producto = producto };
-    }
-    catch (HttpRequestException ex)
-    {
-        if (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-            return RedirectToAction("Salir", "Auth");
-    }
-    ViewBag.Url = configuration["UrlWebAPI"];
-    return View(itemToView);
-}
-
-[HttpPost]
-public async Task<IActionResult> CategoriasAgregar(int id, int categoriaid)
-{
-    Producto? producto = null;
-    if (ModelState.IsValid)
-    {
         try
         {
-            producto = await productos.GetAsync(id);
-            if (producto == null) return NotFound();
+            var itemToView = await productos.GetAsync(id, cancellationToken);
 
-            Categoria? categoria = await categorias.GetAsync(categoriaid);
-            if (categoria == null) return NotFound();
+            if (itemToView is null)
+            {
+                return NotFound();
+            }
 
-            await productos.PostAsync(id, categoriaid);
-            return RedirectToAction(nameof(Categorias), new { id });
+            ViewData[ViewDataKeys.ProductoId] = itemToView.ProductoId;
+            return View(itemToView);
         }
-        catch (HttpRequestException ex)
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
         {
-            if (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                return RedirectToAction("Salir", "Auth");
+            return RedirectToAction(ActionNames.Logout, ControllerNames.Auth);
         }
-    }
-    // En caso de error
-    ViewBag.Url = configuration["UrlWebAPI"];
-    ModelState.AddModelError("id", "No ha sido posible realizar la acción. Inténtelo nuevamente.");
-    await CategoriasDropDownListAsync();
-    return View(new ProductoCategoria { Producto = producto });
-}
-public async Task<IActionResult> CategoriasRemover(int id, int categoriaid, bool? showError = false)
-{
-    ProductoCategoria? itemToView = null;
-    try
-    {
-        Producto? producto = await productos.GetAsync(id);
-        if (producto == null) return NotFound();
-
-        Categoria? categoria = await categorias.GetAsync(categoriaid);
-        if (categoria == null) return NotFound();
-
-        itemToView = new ProductoCategoria 
-        { 
-            Producto = producto, 
-            CategoriaId = categoriaid, 
-            Nombre = categoria.Nombre 
-        };
-
-        if (showError.GetValueOrDefault())
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
         {
-            ViewData["ErrorMessage"] = "No ha sido posible realizar la acción. Inténtelo nuevamente.";
+            return Forbid();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error al cargar categorías del producto con id {ProductoId}.", id);
+            return RedirectToAction(nameof(Index));
         }
     }
-    catch (HttpRequestException ex)
-    {
-        if (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-            return RedirectToAction("Salir", "Auth");
-    }
-    ViewBag.Url = configuration["UrlWebAPI"];
-    return View(itemToView);
-}
 
-[HttpPost]
-public async Task<IActionResult> CategoriasRemover(int id, int categoriaid)
-{
-    if (ModelState.IsValid)
+    [HttpGet]
+    [Authorize(Roles = AppRoles.Administrator)]
+    public async Task<IActionResult> CategoriasAgregar(
+        int id,
+        CancellationToken cancellationToken
+    )
     {
+        if (!IsValidId(id))
+        {
+            return BadRequest(ErrorMessages.InvalidId);
+        }
+
+        SetUrlWebApi();
+
         try
         {
-            await productos.DeleteAsync(id, categoriaid);
+            var producto = await productos.GetAsync(id, cancellationToken);
+
+            if (producto is null)
+            {
+                return NotFound();
+            }
+
+            await CategoriasDropDownListAsync(null, cancellationToken);
+
+            var itemToView = new ProductoCategoria
+            {
+                Producto = producto
+            };
+
+            return View(itemToView);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            return RedirectToAction(ActionNames.Logout, ControllerNames.Auth);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
+        {
+            return Forbid();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error al cargar vista para agregar categoría al producto {ProductoId}.", id);
             return RedirectToAction(nameof(Categorias), new { id });
         }
-        catch (HttpRequestException ex)
+    }
+
+    [HttpPost]
+    [Authorize(Roles = AppRoles.Administrator)]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CategoriasAgregar(
+        int id,
+        int categoriaId,
+        CancellationToken cancellationToken
+    )
+    {
+        if (!IsValidId(id) || !IsValidId(categoriaId))
         {
-            if (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                return RedirectToAction("Salir", "Auth");
+            return BadRequest(ErrorMessages.InvalidId);
         }
-    }
-    // En caso de error
-    return RedirectToAction(nameof(CategoriasRemover), new { id, categoriaid, showError = true });
-}
 
-private async Task CategoriasDropDownListAsync(object? itemSeleccionado = null)
-{
-    var listado = await categorias.GetAsync();
-    ViewBag.Categoria = new SelectList(listado, "CategoriaId", "Nombre", itemSeleccionado);
-}
+        SetUrlWebApi();
 
-private async Task ProductosDropDownListAsync(object? itemSeleccionado = null)
-{
-    var listado = await archivos.GetAsync();
-    ViewBag.Archivo = new SelectList(listado, "ArchivoId", "Nombre", itemSeleccionado);
-}
-public async Task<IActionResult> CategoriasRemover(int id, int categoriaid, bool? showError = false)
-{
-    ProductoCategoria? itemToView = null;
-    try
-    {
-        Producto? producto = await productos.GetAsync(id);
-        if (producto == null) return NotFound();
+        Producto? producto = null;
 
-        Categoria? categoria = await categorias.GetAsync(categoriaid);
-        if (categoria == null) return NotFound();
-
-        itemToView = new ProductoCategoria 
-        { 
-            Producto = producto, 
-            CategoriaId = categoriaid, 
-            Nombre = categoria.Nombre 
-        };
-
-        if (showError.GetValueOrDefault())
-        {
-            ViewData["ErrorMessage"] = "No ha sido posible realizar la acción. Inténtelo nuevamente.";
-        }
-    }
-    catch (HttpRequestException ex)
-    {
-        if (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-            return RedirectToAction("Salir", "Auth");
-    }
-    ViewBag.Url = configuration["UrlWebAPI"];
-    return View(itemToView);
-}
-
-[HttpPost]
-public async Task<IActionResult> CategoriasRemover(int id, int categoriaid)
-{
-    if (ModelState.IsValid)
-    {
         try
         {
-            await productos.DeleteAsync(id, categoriaid);
+            producto = await productos.GetAsync(id, cancellationToken);
+
+            if (producto is null)
+            {
+                return NotFound();
+            }
+
+            var categoria = await categorias.GetAsync(categoriaId, cancellationToken);
+
+            if (categoria is null)
+            {
+                return NotFound();
+            }
+
+            await productos.PostAsync(id, categoriaId, cancellationToken);
             return RedirectToAction(nameof(Categorias), new { id });
         }
-        catch (HttpRequestException ex)
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
         {
-            if (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                return RedirectToAction("Salir", "Auth");
+            return RedirectToAction(ActionNames.Logout, ControllerNames.Auth);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
+        {
+            return Forbid();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Error al agregar categoría {CategoriaId} al producto {ProductoId}.",
+                categoriaId,
+                id
+            );
+
+            ModelState.AddModelError(nameof(ProductoCategoria.CategoriaId), ErrorMessages.GenericActionError);
+            await CategoriasDropDownListAsync(categoriaId, cancellationToken);
+
+            return View(new ProductoCategoria { Producto = producto });
         }
     }
-    // En caso de error
-    return RedirectToAction(nameof(CategoriasRemover), new { id, categoriaid, showError = true });
-}
 
-private async Task CategoriasDropDownListAsync(object? itemSeleccionado = null)
-{
-    var listado = await categorias.GetAsync();
-    ViewBag.Categoria = new SelectList(listado, "CategoriaId", "Nombre", itemSeleccionado);
-}
+    [HttpGet]
+    [Authorize(Roles = AppRoles.Administrator)]
+    public async Task<IActionResult> CategoriasRemover(
+        int id,
+        int categoriaId,
+        bool? showError = false,
+        CancellationToken cancellationToken = default
+    )
+    {
+        if (!IsValidId(id) || !IsValidId(categoriaId))
+        {
+            return BadRequest(ErrorMessages.InvalidId);
+        }
 
-private async Task ProductosDropDownListAsync(object? itemSeleccionado = null)
-{
-    var listado = await archivos.GetAsync();
-    ViewBag.Archivo = new SelectList(listado, "ArchivoId", "Nombre", itemSeleccionado);
-}
+        SetUrlWebApi();
+
+        try
+        {
+            var producto = await productos.GetAsync(id, cancellationToken);
+
+            if (producto is null)
+            {
+                return NotFound();
+            }
+
+            var categoria = await categorias.GetAsync(categoriaId, cancellationToken);
+
+            if (categoria is null)
+            {
+                return NotFound();
+            }
+
+            if (showError.GetValueOrDefault())
+            {
+                ViewData[ViewDataKeys.ErrorMessage] = ErrorMessages.GenericActionError;
+            }
+
+            var itemToView = new ProductoCategoria
+            {
+                Producto = producto,
+                CategoriaId = categoriaId,
+                Nombre = categoria.Nombre
+            };
+
+            return View(itemToView);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            return RedirectToAction(ActionNames.Logout, ControllerNames.Auth);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
+        {
+            return Forbid();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Error al cargar vista para remover categoría {CategoriaId} del producto {ProductoId}.",
+                categoriaId,
+                id
+            );
+
+            return RedirectToAction(nameof(Categorias), new { id });
+        }
+    }
+
+    [HttpPost]
+    [Authorize(Roles = AppRoles.Administrator)]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CategoriasRemover(
+        int id,
+        int categoriaId,
+        CancellationToken cancellationToken
+    )
+    {
+        if (!IsValidId(id) || !IsValidId(categoriaId))
+        {
+            return BadRequest(ErrorMessages.InvalidId);
+        }
+
+        try
+        {
+            await productos.DeleteAsync(id, categoriaId, cancellationToken);
+            return RedirectToAction(nameof(Categorias), new { id });
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            return RedirectToAction(ActionNames.Logout, ControllerNames.Auth);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
+        {
+            return Forbid();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Error al remover categoría {CategoriaId} del producto {ProductoId}.",
+                categoriaId,
+                id
+            );
+
+            return RedirectToAction(nameof(CategoriasRemover), new { id, categoriaId, showError = true });
+        }
+    }
+
+    private static bool IsValidId(int id)
+    {
+        return id > 0;
+    }
+
+    private static string? NormalizeSearch(string? search)
+    {
+        if (string.IsNullOrWhiteSpace(search))
+        {
+            return null;
+        }
+
+        var normalizedSearch = search.Trim();
+
+        return normalizedSearch.Length > SearchMaxLength
+            ? normalizedSearch[..SearchMaxLength]
+            : normalizedSearch;
+    }
+
+    private static void NormalizeProducto(Producto producto)
+    {
+        producto.Titulo = producto.Titulo.Trim();
+        producto.Descripcion = producto.Descripcion.Trim();
+    }
+
+    private async Task CategoriasDropDownListAsync(
+        object? itemSeleccionado,
+        CancellationToken cancellationToken
+    )
+    {
+        var listado = await categorias.GetAsync(cancellationToken);
+        ViewBag.Categoria = new SelectList(listado, "CategoriaId", "Nombre", itemSeleccionado);
+    }
+
+    private async Task ArchivosDropDownListAsync(
+        object? itemSeleccionado,
+        CancellationToken cancellationToken
+    )
+    {
+        var listado = await archivos.GetAsync(cancellationToken);
+        ViewBag.Archivo = new SelectList(listado, "ArchivoId", "Nombre", itemSeleccionado);
+    }
+
+    private void SetUrlWebApi()
+    {
+        var configuredUrl = configuration[ConfigurationKeys.UrlWebApi];
+
+        if (Uri.TryCreate(configuredUrl, UriKind.Absolute, out var uri))
+        {
+            ViewBag.Url = uri.ToString().TrimEnd('/');
+            return;
+        }
+
+        ViewBag.Url = string.Empty;
+    }
 }

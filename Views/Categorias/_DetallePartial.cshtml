@@ -1,14 +1,44 @@
 @model Categoria
 
+@{
+    var hasValidModel = Model is not null && Model.CategoriaId.HasValue && Model.CategoriaId.Value > 0;
+
+    var categoryName = string.IsNullOrWhiteSpace(Model?.Nombre)
+        ? "No disponible"
+        : Model.Nombre;
+
+    var categoryId = hasValidModel
+        ? Model!.CategoriaId!.Value.ToString()
+        : "No disponible";
+}
+
 <div class="card mt-3">
     <div class="card-body">
-        <div class="mb-3 ps-3">
-            <label asp-for="CategoriaId" class="form-label form-text"></label>
-            <div class="form-text text-body">@Model.CategoriaId</div>
-        </div>
-        <div class="mb-3 ps-3">
-            <label asp-for="Nombre" class="form-label form-text"></label>
-            <div class="form-text text-body">@Model.Nombre</div>
-        </div>
+        @if (!hasValidModel)
+        {
+            <div class="alert alert-warning mb-0" role="alert">
+                No fue posible cargar la información de la categoría.
+            </div>
+        }
+        else
+        {
+            <div class="mb-3 ps-3">
+                <span class="form-label form-text d-block">
+                    @Html.DisplayNameFor(model => model.CategoriaId)
+                </span>
+                <div class="form-text text-body">
+                    @categoryId
+                </div>
+            </div>
+
+            <div class="mb-3 ps-3">
+                <span class="form-label form-text d-block">
+                    @Html.DisplayNameFor(model => model.Nombre)
+                </span>
+                <div class="form-text text-body">
+                    @categoryName
+                </div>
+            </div>
+        }
     </div>
 </div>

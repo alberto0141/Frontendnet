@@ -2,8 +2,24 @@ namespace frontendnet.Services;
 
 public class PerfilClientService(HttpClient client)
 {
-    public async Task<string> ObtenTiempoAsync()
+    public async Task<string> ObtenTiempoAsync(
+        CancellationToken cancellationToken = default
+    )
     {
-        return await client.GetStringAsync($"api/auth/tiempo");
+        using var response = await client.GetAsync(
+            ApiRoutes.AuthTime,
+            cancellationToken
+        );
+
+        response.EnsureSuccessStatusCode();
+
+        var tiempo = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(tiempo))
+        {
+            throw new InvalidOperationException("La respuesta del tiempo de sesión no es válida.");
+        }
+
+        return tiempo;
     }
 }

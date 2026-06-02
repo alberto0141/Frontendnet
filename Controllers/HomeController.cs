@@ -1,21 +1,30 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace frontendnet;
 
-public class HomeController : Controller
+[AllowAnonymous]
+public class HomeController(ILogger<HomeController> logger) : Controller
 {
+    [HttpGet]
     public IActionResult Index()
     {
         return View();
     }
 
-    public IActionResult Error([FromServices] IHostEnvironment hostEnvironment)
+    [HttpGet]
+    [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+    public IActionResult Error()
     {
+        logger.LogWarning("Se mostró la vista de error general.");
         return View();
     }
 
+    [HttpGet]
+    [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult AccessDenied()
     {
+        logger.LogWarning("Acceso denegado para el usuario {Usuario}.", User.Identity?.Name ?? "Anónimo");
         return View();
     }
 }

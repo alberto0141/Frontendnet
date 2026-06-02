@@ -1,0 +1,17 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.20.0/jquery.validate.min.js"
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/4.0.0/jquery.validate.unobtrusive.min.js"
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+
+<script>
+    const settings = {
+        validClass: "is-valid",
+        errorClass: "is-invalid"
+    };
+
+    $.validator.setDefaults(settings);
+    $.validator.unobtrusive.options = settings;
+</script>

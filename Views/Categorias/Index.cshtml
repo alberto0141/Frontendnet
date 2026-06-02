@@ -1,67 +1,146 @@
-@model List<Categoria>
+@model IEnumerable<Categoria>
+
 @{
-    ViewData["Title"] = "Categorias";
+    ViewData["Title"] = "Categorías";
     ViewData["SubTitle"] = "Listado";
+
+    var categorias = Model?.ToList() ?? [];
+
+    static string SafeText(string? value, int maxLength = 120)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "No disponible";
+        }
+
+        var normalizedValue = value.Trim();
+
+        return normalizedValue.Length > maxLength
+            ? $"{normalizedValue[..maxLength]}..."
+            : normalizedValue;
+    }
 }
 
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb small">
-        <li class="breadcrumb-item active" aria-current="page">@ViewData["SubTitle"]</li>
+        <li class="breadcrumb-item active" aria-current="page">
+            @ViewData["SubTitle"]
+        </li>
     </ol>
 </nav>
 
-<h2 class="text-center mb-3">@ViewData["Title"] <small class="text-muted fs-5">@ViewData["SubTitle"]</small></h2>
+<h2 class="text-center mb-3">
+    @ViewData["Title"]
+    <small class="text-muted fs-5">@ViewData["SubTitle"]</small>
+</h2>
+
+<div class="text-end mb-3">
+    <a class="btn btn-sm btn-primary"
+       asp-action="Crear"
+       title="Crear nueva categoría">
+        Crear nueva
+    </a>
+</div>
 
 <div class="row small mb-3">
-    <div class="col">
-        <a class="text-decoration-none" asp-action="Crear" title="Crear nuevo">Crear nueva</a>
-    </div>
     <div class="col text-end">
-        Mostrando @Model.Count() elementos
+        Mostrando @categorias.Count elementos
     </div>
 </div>
 
-@if (Model.Count() > 0)
+@if (categorias.Count > 0)
 {
     <div class="table-responsive">
-        <table class="table table-striped table-bordered small">
-            <thead class="text-center">
+        <table class="table table-striped table-bordered align-middle">
+            <thead>
                 <tr>
-                    <th>
-                        @Html.DisplayNameFor(model => model.First().CategoriaId)
+                    <th scope="col">
+                        Id
                     </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.First().Nombre)
+                    <th scope="col">
+                        Nombre
                     </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.First().Protegida)
+                    <th scope="col">
+                        Protegida
                     </th>
-                    <th></th>
-                    <th></th>
-                    <th></th>
+                    <th scope="col" class="text-center">
+                        Acciones
+                    </th>
                 </tr>
             </thead>
+
             <tbody>
-                @foreach (var item in Model)
+                @foreach (var item in categorias)
                 {
+                    var hasValidId = item.CategoriaId.HasValue && item.CategoriaId.Value > 0;
+                    var nombre = SafeText(item.Nombre);
+
                     <tr>
                         <td>
-                            @Html.DisplayFor(modelItem => item.CategoriaId)
+                            @(hasValidId ? item.CategoriaId!.Value.ToString() : "No disponible")
                         </td>
+
+                        <td title="@SafeText(item.Nombre, 500)">
+                            @nombre
+                        </td>
+
                         <td>
-                            @Html.DisplayFor(modelItem => item.Nombre)
+                            @if (item.Protegida)
+                            {
+                                <span class="badge text-bg-warning">
+                                    Sí
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge text-bg-success">
+                                    No
+                                </span>
+                            }
                         </td>
-                        <td>
-                            @(item.Protegida ? "No" : "Sí")
-                        </td>
-                        <td width="1">
-                            <a class="text-decoration-none small text-uppercase" asp-action="Detalle" asp-route-id="@item.CategoriaId">Detalle</a>
-                        </td>
-                        <td width="1">
-                            <a class="text-decoration-none small text-uppercase" asp-action="Editar" asp-route-id="@item.CategoriaId">Editar</a>
-                        </td>
-                        <td width="1">
-                            <a class="text-decoration-none small text-uppercase" asp-action="Eliminar" asp-route-id="@item.CategoriaId">Eliminar</a>
+
+                        <td class="text-center">
+                            @if (hasValidId)
+                            {
+                                <a class="btn btn-sm btn-outline-secondary"
+                                   asp-action="Detalle"
+                                   asp-route-id="@item.CategoriaId"
+                                   title="Ver detalle">
+                                    Detalle
+                                </a>
+
+                                <a class="btn btn-sm btn-outline-primary"
+                                   asp-action="Editar"
+                                   asp-route-id="@item.CategoriaId"
+                                   title="Editar categoría">
+                                    Editar
+                                </a>
+
+                                @if (!item.Protegida)
+                                {
+                                    <a class="btn btn-sm btn-outline-danger"
+                                       asp-action="Eliminar"
+                                       asp-route-id="@item.CategoriaId"
+                                       title="Eliminar categoría">
+                                        Eliminar
+                                    </a>
+                                }
+                                else
+                                {
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-secondary"
+                                            disabled
+                                            title="Categoría protegida">
+                                        Protegida
+                                    </button>
+                                }
+                            }
+                            else
+                            {
+                                <span class="text-muted">
+                                    Sin acciones
+                                </span>
+                            }
                         </td>
                     </tr>
                 }
@@ -71,9 +150,7 @@
 }
 else
 {
-    <div class="mt-5">
-        <div class="alert alert-warning" role="alert">
-            No se han encontrado elementos. Inténtelo de nuevo más tarde.
-        </div>
+    <div class="alert alert-warning" role="alert">
+        No se encontraron elementos. Inténtelo de nuevo más tarde.
     </div>
 }

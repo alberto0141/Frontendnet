@@ -1,18 +1,73 @@
 @model Usuario
 
+@{
+    var hasValidModel = Model is not null &&
+                        !string.IsNullOrWhiteSpace(Model.Email) &&
+                        !string.IsNullOrWhiteSpace(Model.Nombre) &&
+                        !string.IsNullOrWhiteSpace(Model.Rol);
+
+    var id = string.IsNullOrWhiteSpace(Model?.Id)
+        ? "No disponible"
+        : Model.Id.Trim();
+
+    var email = string.IsNullOrWhiteSpace(Model?.Email)
+        ? "No disponible"
+        : Model.Email.Trim();
+
+    var nombre = string.IsNullOrWhiteSpace(Model?.Nombre)
+        ? "No disponible"
+        : Model.Nombre.Trim();
+
+    var rol = string.IsNullOrWhiteSpace(Model?.Rol)
+        ? "No disponible"
+        : Model.Rol.Trim();
+}
+
 <div class="card mt-3">
     <div class="card-body">
-        <div class="mb-3 ps-3">
-            <label asp-for="Email" class="form-label form-text"></label>
-            <div class="form-text text-body">@Model.Email</div>
-        </div>
-        <div class="mb-3 ps-3">
-            <label asp-for="Nombre" class="form-label form-text"></label>
-            <div class="form-text text-body">@Model.Nombre</div>
-        </div>
-        <div class="mb-3 ps-3">
-            <label asp-for="Rol" class="form-label form-text"></label>
-            <div class="form-text text-body">@Model.Rol</div>
-        </div>
+        @if (!hasValidModel)
+        {
+            <div class="alert alert-warning mb-0" role="alert">
+                No fue posible cargar la información del usuario.
+            </div>
+        }
+        else
+        {
+            <div class="mb-3 ps-3">
+                <span class="form-label form-text d-block">
+                    @Html.DisplayNameFor(model => model.Id)
+                </span>
+                <div class="form-text text-body">
+                    @id
+                </div>
+            </div>
+
+            <div class="mb-3 ps-3">
+                <span class="form-label form-text d-block">
+                    @Html.DisplayNameFor(model => model.Email)
+                </span>
+                <div class="form-text text-body">
+                    @email
+                </div>
+            </div>
+
+            <div class="mb-3 ps-3">
+                <span class="form-label form-text d-block">
+                    @Html.DisplayNameFor(model => model.Nombre)
+                </span>
+                <div class="form-text text-body">
+                    @nombre
+                </div>
+            </div>
+
+            <div class="mb-3 ps-3">
+                <span class="form-label form-text d-block">
+                    @Html.DisplayNameFor(model => model.Rol)
+                </span>
+                <div class="form-text text-body">
+                    @rol
+                </div>
+            </div>
+        }
     </div>
 </div>

@@ -1,23 +1,102 @@
 @model Producto
 
-<div class="card h-100">
-    <div class="card-header text-center bg-white pt-3">
-        <img src="@((Model.ArchivoId == null) ? "https://placeholder.co/300x200/FFF/999?text=Artículo" : $"{ViewBag.Url}/api/archivos/{Model.ArchivoId}")"
-             alt="@Model.Titulo" class="img-fluid" data-url="@ViewBag.Url"
-             style="max-height: 200px; width: fit-content;">
-    </div>
-    <div class="card-body d-flex flex-column">
-        <p class="card-text">@Model.Titulo</p>
-        <h5 class="card-title">@Html.DisplayFor(model => model.Precio)</h5>
-        <p class="card-text">
-            @foreach (var cat in Model.Categorias!)
+@{
+    static string SafeText(string? value, int maxLength = 120)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "No disponible";
+        }
+
+        var normalizedValue = value.Trim();
+
+        return normalizedValue.Length > maxLength
+            ? $"{normalizedValue[..maxLength]}..."
+            : normalizedValue;
+    }
+
+    var hasValidProduct = Model is not null && Model.ProductoId > 0;
+    var hasValidFile = Model?.ArchivoId is > 0;
+
+    var title = SafeText(Model?.Titulo);
+    var description = SafeText(Model?.Descripcion, 160);
+
+    var price = Model?.Precio is > 0
+        ? Model.Precio.ToString("C")
+        : "No disponible";
+
+    var configuredUrl = Convert.ToString(ViewBag.Url);
+    Uri? baseUri = null;
+    var hasValidBaseUrl = Uri.TryCreate(configuredUrl, UriKind.Absolute, out baseUri);
+
+    var imageUrl = hasValidFile && hasValidBaseUrl
+        ? $"{baseUri!.ToString().TrimEnd('/')}/api/archivos/{Model!.ArchivoId}"
+        : Url.Content("~/images/logo.png");
+
+    var categories = Model?.Categorias ?? [];
+}
+
+@if (hasValidProduct)
+{
+    <div class="card h-100">
+        <img src="@imageUrl"
+             alt="@title"
+             class="card-img-top comprar-card-img"
+             loading="lazy"
+             decoding="async">
+
+        <div class="card-body d-flex flex-column">
+            <p class="card-text fw-semibold" title="@SafeText(Model?.Titulo, 500)">
+                @title
+            </p>
+
+            <p class="card-text small text-muted" title="@SafeText(Model?.Descripcion, 500)">
+                @description
+            </p>
+
+            <h5 class="card-title">
+                @price
+            </h5>
+
+            @if (categories.Any())
             {
-                <span class="badge rounded-pill text-bg-warning">@cat.Nombre</span>
+                <p class="card-text">
+                    @foreach (var category in categories)
+                    {
+                        var categoryName = SafeText(category.Nombre, 50);
+
+                        <span class="badge rounded-pill text-bg-warning me-1">
+                            @categoryName
+                        </span>
+                    }
+                </p>
             }
-        </p>
-        <p class="mt-auto card-text text-success fw-semibold small"><i class="bi bi-lightning-fill"></i> Envío gratis</p>
+
+            <p class="mt-auto card-text text-success fw-semibold small">
+                <i class="bi bi-lightning-fill" aria-hidden="true"></i>
+                Envío gratis
+            </p>
+        </div>
+
+        <div class="card-footer text-center">
+            <form asp-controller="Carrito"
+                  asp-action="Agregar"
+                  asp-route-id="@Model!.ProductoId"
+                  method="post"
+                  autocomplete="off">
+                @Html.AntiForgeryToken()
+
+                <button type="submit"
+                        class="btn btn-sm btn-primary">
+                    Agregar al carrito
+                </button>
+            </form>
+        </div>
     </div>
-    <div class="card-footer">
-        <a class="btn btn-primary btn-sm" href="#" role="button">Comprar</a>
+}
+else
+{
+    <div class="alert alert-warning" role="alert">
+        No fue posible cargar este producto.
     </div>
-</div>
+}

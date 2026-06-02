@@ -1,57 +1,158 @@
+using System.Net.Http.Headers;
 using frontendnet.Middlewares;
+using frontendnet.Models.Validation;
 using frontendnet.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Agregamos los servicios
-builder.Services.AddControllersWithViews();
+var apiBaseUrl = builder.Configuration["UrlWebAPI"];
 
-// Soporte para consultar el API
-var UrlWebAPI = builder.Configuration["UrlWebAPI"];
+if (!Uri.TryCreate(apiBaseUrl, UriKind.Absolute, out var apiUri))
+{
+    throw new InvalidOperationException("UrlWebAPI no está configurada correctamente.");
+}
+
+if (!builder.Environment.IsDevelopment() && apiUri.Scheme != Uri.UriSchemeHttps)
+{
+    throw new InvalidOperationException("UrlWebAPI debe usar HTTPS en producción.");
+}
+
+var cookieSecurePolicy = builder.Environment.IsDevelopment()
+    ? CookieSecurePolicy.SameAsRequest
+    : CookieSecurePolicy.Always;
+
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddTransient<EnviaBearerDelegatingHandler>();
-builder.Services.AddTransient<RefrescaTokenDelegatingHandler>();
-builder.Services.AddHttpClient<AuthClientService>(httpClient => { httpClient.BaseAddress = new Uri(UrlWebAPI!); });
-builder.Services.AddHttpClient<CategoriasClientService>(httpClient => { httpClient.BaseAddress = new Uri(UrlWebAPI!); })
-    .AddHttpMessageHandler<EnviaBearerDelegatingHandler>()
-    .AddHttpMessageHandler<RefrescaTokenDelegatingHandler>();
-builder.Services.AddHttpClient<UsuariosClientService>(httpClient => { httpClient.BaseAddress = new Uri(UrlWebAPI!); })
-    .AddHttpMessageHandler<EnviaBearerDelegatingHandler>()
-    .AddHttpMessageHandler<RefrescaTokenDelegatingHandler>();
-builder.Services.AddHttpClient<RolesClientService>(httpClient => { httpClient.BaseAddress = new Uri(UrlWebAPI!); })
-    .AddHttpMessageHandler<EnviaBearerDelegatingHandler>()
-    .AddHttpMessageHandler<RefrescaTokenDelegatingHandler>();
-builder.Services.AddHttpClient<ProductosClientService>(httpClient => { httpClient.BaseAddress = new Uri(UrlWebAPI!); })
-    .AddHttpMessageHandler<EnviaBearerDelegatingHandler>()
-    .AddHttpMessageHandler<RefrescaTokenDelegatingHandler>();
-builder.Services.AddHttpClient<PerfilClientService>(httpClient => { httpClient.BaseAddress = new Uri(UrlWebAPI!); })
-    .AddHttpMessageHandler<EnviaBearerDelegatingHandler>()
-    .AddHttpMessageHandler<RefrescaTokenDelegatingHandler>();
-builder.Services.AddHttpClient<ArchivosClientService>(httpClient => { httpClient.BaseAddress = new Uri(UrlWebAPI!); })
-    .AddHttpMessageHandler<EnviaBearerDelegatingHandler>()
-    .AddHttpMessageHandler<RefrescaTokenDelegatingHandler>();
-builder.Services.AddHttpClient<BitacoraClientService>(httpClient => { httpClient.BaseAddress = new Uri(UrlWebAPI!); })
-    .AddHttpMessageHandler<EnviaBearerDelegatingHandler>()
-    .AddHttpMessageHandler<RefrescaTokenDelegatingHandler>();
 
-// Soporte para Cookie Auth
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = FileValidation.MaxFileSizeBytes;
+});
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedProto;
+});
+
+builder.Services.AddAntiforgery(options =>
+{
+    options.Cookie.Name = "frontendnet.antiforgery";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.Cookie.SecurePolicy = cookieSecurePolicy;
+    options.FormFieldName = "__RequestVerificationToken";
+});
+
+builder.Services
+    .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
-        options.Cookie.Name = ".frontendnet";
-        options.AccessDeniedPath = "/Home/AccessDenied";
+        options.Cookie.Name = "frontendnet.auth";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Strict;
+        options.Cookie.SecurePolicy = cookieSecurePolicy;
+
         options.LoginPath = "/Auth";
+        options.LogoutPath = "/Auth/Salir";
+        options.AccessDeniedPath = "/Home/AccessDenied";
+
         options.SlidingExpiration = true;
-        options.ExpireTimeSpan = TimeSpan.FromMinutes(20);
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
+        options.ReturnUrlParameter = "returnUrl";
     });
+
+builder.Services.AddAuthorization();
+
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
+});
+
+builder.Services.AddTransient<EnviaBearerDelegatingHandler>();
+builder.Services.AddTransient<RefrescaTokenDelegatingHandler>();
+
+builder.Services.AddHttpClient<AuthClientService>(ConfigureApiClient);
+
+builder.Services.AddHttpClient<CategoriasClientService>(ConfigureApiClient)
+    .AddHttpMessageHandler<EnviaBearerDelegatingHandler>()
+    .AddHttpMessageHandler<RefrescaTokenDelegatingHandler>();
+
+builder.Services.AddHttpClient<ProductosClientService>(ConfigureApiClient)
+    .AddHttpMessageHandler<EnviaBearerDelegatingHandler>()
+    .AddHttpMessageHandler<RefrescaTokenDelegatingHandler>();
+
+builder.Services.AddHttpClient<PerfilClientService>(ConfigureApiClient)
+    .AddHttpMessageHandler<EnviaBearerDelegatingHandler>()
+    .AddHttpMessageHandler<RefrescaTokenDelegatingHandler>();
+
+builder.Services.AddHttpClient<RolesClientService>(ConfigureApiClient)
+    .AddHttpMessageHandler<EnviaBearerDelegatingHandler>()
+    .AddHttpMessageHandler<RefrescaTokenDelegatingHandler>();
+
+builder.Services.AddHttpClient<UsuariosClientService>(ConfigureApiClient)
+    .AddHttpMessageHandler<EnviaBearerDelegatingHandler>()
+    .AddHttpMessageHandler<RefrescaTokenDelegatingHandler>();
+
+builder.Services.AddHttpClient<ArchivosClientService>(ConfigureApiClient)
+    .AddHttpMessageHandler<EnviaBearerDelegatingHandler>()
+    .AddHttpMessageHandler<RefrescaTokenDelegatingHandler>();
+
+builder.Services.AddHttpClient<BitacoraClientService>(ConfigureApiClient)
+    .AddHttpMessageHandler<EnviaBearerDelegatingHandler>()
+    .AddHttpMessageHandler<RefrescaTokenDelegatingHandler>();
 
 var app = builder.Build();
 
-// Agregamos un middleware para el manejo de errores
-app.UseExceptionHandler("/Home/Error");
+app.UseForwardedHeaders();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
+}
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
+app.Use(async (context, next) =>
+{
+    var apiOrigin = apiUri.GetLeftPart(UriPartial.Authority);
+
+    context.Response.Headers.TryAdd("X-Content-Type-Options", "nosniff");
+    context.Response.Headers.TryAdd("X-Frame-Options", "DENY");
+    context.Response.Headers.TryAdd("Referrer-Policy", "strict-origin-when-cross-origin");
+    context.Response.Headers.TryAdd("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+
+    context.Response.Headers.TryAdd(
+        "Content-Security-Policy",
+        $"default-src 'self'; " +
+        $"script-src 'self' https://cdnjs.cloudflare.com; " +
+        $"style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; " +
+        $"img-src 'self' data: {apiOrigin}; " +
+        $"font-src 'self' https://cdn.jsdelivr.net; " +
+        $"connect-src 'self' {apiOrigin}; " +
+        $"object-src 'none'; " +
+        $"frame-ancestors 'none'; " +
+        $"base-uri 'self'; " +
+        $"form-action 'self';"
+    );
+
+    await next();
+});
 
 app.UseStaticFiles();
+
 app.UseRouting();
 
 app.UseAuthentication();
@@ -59,6 +160,26 @@ app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+    pattern: "{controller=Home}/{action=Index}/{id?}"
+);
 
-app.Run();
+await app.RunAsync();
+
+static void ConfigureApiClient(IServiceProvider services, HttpClient client)
+{
+    var configuration = services.GetRequiredService<IConfiguration>();
+    var configuredUrl = configuration["UrlWebAPI"];
+
+    if (!Uri.TryCreate(configuredUrl, UriKind.Absolute, out var baseUri))
+    {
+        throw new InvalidOperationException("UrlWebAPI no está configurada correctamente.");
+    }
+
+    client.BaseAddress = baseUri;
+    client.Timeout = TimeSpan.FromSeconds(30);
+
+    client.DefaultRequestHeaders.Accept.Clear();
+    client.DefaultRequestHeaders.Accept.Add(
+        new MediaTypeWithQualityHeaderValue("application/json")
+    );
+}

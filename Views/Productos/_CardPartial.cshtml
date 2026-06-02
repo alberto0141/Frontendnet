@@ -1,35 +1,122 @@
+@using frontendnet.Security
 @model Producto
 
-<div class="card mt-3">
-    <div class="row g-0">
-        <div class="col-md-4 text-center bg-white pt-3">
-            <img src="@((Model.ArchivoId == null) ? "https://placeholder.co/300x450/FFF/999?text=Articulo" : $"{ViewBag.Url}/api/archivos/{Model.ArchivoId}")"
-                 alt="@Model.Titulo" class="portada img-fluid" data-url="@ViewBag.Url"
-                 style="max-height: 300px;" />
+@{
+    static string SafeText(string? value, int maxLength = 120)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "No disponible";
+        }
+
+        var normalizedValue = value.Trim();
+
+        return normalizedValue.Length > maxLength
+            ? $"{normalizedValue[..maxLength]}..."
+            : normalizedValue;
+    }
+
+    var hasValidProduct = Model is not null && Model.ProductoId > 0;
+    var hasValidFile = Model?.ArchivoId is > 0;
+
+    var title = SafeText(Model?.Titulo);
+    var description = SafeText(Model?.Descripcion, 160);
+
+    var price = Model?.Precio is > 0
+        ? Model.Precio.ToString("C")
+        : "No disponible";
+
+    var configuredUrl = Convert.ToString(ViewBag.Url);
+    Uri? baseUri = null;
+    var hasValidBaseUrl = Uri.TryCreate(configuredUrl, UriKind.Absolute, out baseUri);
+
+    var imageUrl = hasValidFile && hasValidBaseUrl
+        ? $"{baseUri!.ToString().TrimEnd('/')}/api/archivos/{Model!.ArchivoId}"
+        : Url.Content("~/images/logo.png");
+
+    var categories = Model?.Categorias ?? [];
+    var isAdministrator = User.IsInRole(AppRoles.Administrator);
+}
+
+@if (hasValidProduct)
+{
+    <div class="card h-100">
+        <img src="@imageUrl"
+             alt="@title"
+             class="card-img-top producto-card-img"
+             loading="lazy"
+             decoding="async">
+
+        <div class="card-body d-flex flex-column">
+            <p class="card-text fw-semibold" title="@SafeText(Model?.Titulo, 500)">
+                @title
+            </p>
+
+            <p class="card-text small text-muted" title="@SafeText(Model?.Descripcion, 500)">
+                @description
+            </p>
+
+            <h5 class="card-title">
+                @price
+            </h5>
+
+            @if (categories.Any())
+            {
+                <p class="card-text">
+                    @foreach (var category in categories)
+                    {
+                        var categoryName = SafeText(category.Nombre, 50);
+
+                        <span class="badge rounded-pill text-bg-warning me-1">
+                            @categoryName
+                        </span>
+                    }
+                </p>
+            }
+
+            <p class="mt-auto card-text text-success fw-semibold small">
+                <i class="bi bi-lightning-fill" aria-hidden="true"></i>
+                Envío gratis
+            </p>
         </div>
-        <div class="col-md-8">
-            <div class="card-body">
-                <div class="mb-3 ps-3">
-                    <label asp-for="ProductoId" class="form-label form-text"></label>
-                    <div class="form-text text-body">@Model.ProductoId</div>
-                </div>
-                <div class="mb-3 ps-3">
-                    <label asp-for="Titulo" class="form-label form-text"></label>
-                    <div class="form-text text-body">@Model.Titulo</div>
-                </div>
-                <div class="mb-3 ps-3">
-                    <label asp-for="Precio" class="form-label form-text"></label>
-                    <div class="form-text text-body">@Model.Precio</div>
-                </div>
-                <div class="mb-3 ps-3">
-                    <label asp-for="ArchivoId" class="form-label form-text"></label>
-                    <div class="form-text text-body">@((Model.ArchivoId == null) ? "N/A" : $"Id: {Model.ArchivoId}")</div>
-                </div>
-                <div class="mb-3 ps-3">
-                    <label asp-for="Descripcion" class="form-label form-text"></label>
-                    <div class="form-text text-body">@Model.Descripcion</div>
-                </div>
-            </div>
+
+        <div class="card-footer text-center">
+            <a class="btn btn-sm btn-outline-secondary"
+               asp-action="Detalle"
+               asp-route-id="@Model!.ProductoId"
+               title="Ver detalle">
+                Detalle
+            </a>
+
+            @if (isAdministrator)
+            {
+                <a class="btn btn-sm btn-outline-primary"
+                   asp-action="Editar"
+                   asp-route-id="@Model.ProductoId"
+                   title="Editar producto">
+                    Editar
+                </a>
+
+                <a class="btn btn-sm btn-outline-warning"
+                   asp-action="Categorias"
+                   asp-route-id="@Model.ProductoId"
+                   title="Administrar categorías">
+                    Categorías
+                </a>
+
+                <a class="btn btn-sm btn-outline-danger"
+                   asp-action="Eliminar"
+                   asp-route-id="@Model.ProductoId"
+                   title="Eliminar producto">
+                    Eliminar
+                </a>
+            }
         </div>
     </div>
-</div>
+}
+else
+{
+    <div class="alert alert-warning" role="alert">
+        No fue posible cargar este producto.
+    </div>
+}

@@ -1,0 +1,46 @@
+<div class="navbar-nav ms-auto align-items-center gap-2 small">
+    <div class="nav-item d-flex align-items-center">
+        <label class="form-check-label me-1" for="darkModeSwitch">
+            <i class="bi bi-moon-stars modo-luz" aria-hidden="true"></i>
+        </label>
+
+        <input class="form-check-input"
+               type="checkbox"
+               id="darkModeSwitch"
+               aria-label="Cambiar tema oscuro">
+    </div>
+
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <a class="nav-link px-2"
+           asp-controller="Perfil"
+           asp-action="Index">
+            Hola @User.Identity.Name
+        </a>
+
+        <form asp-controller="Auth"
+              asp-action="Salir"
+              method="post"
+              class="m-0 d-flex align-items-center">
+            @Html.AntiForgeryToken()
+
+            <button type="submit"
+                    class="btn btn-link nav-link px-2 py-0">
+                Salir
+            </button>
+        </form>
+    }
+    else
+    {
+        <a class="nav-link px-2"
+           asp-controller="Auth"
+           asp-action="Index">
+            Iniciar sesión
+        </a>
+    }
+
+    <img src="~/images/netlogo.jpg"
+         height="22"
+         alt=".NET"
+         loading="lazy">
+</div>

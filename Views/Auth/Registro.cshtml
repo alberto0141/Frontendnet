@@ -1,0 +1,118 @@
+@model RegistroPublico
+
+@{
+    ViewData["Title"] = "Crear cuenta";
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+
+<form asp-action="Registro"
+      method="post"
+      autocomplete="off">
+    @Html.AntiForgeryToken()
+
+    <div class="card mx-auto login-card">
+        <div class="card-body">
+            <h1 class="h3 text-center">Bienvenido a Mercado Libre</h1>
+            <h2 class="h6 text-center text-muted">Facultad de Estadística e Informática</h2>
+            <h3 class="card-title text-center mt-4">@ViewData["Title"]</h3>
+
+            <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+
+            <div class="form-floating mb-3">
+                <input asp-for="Email"
+                       id="Email"
+                       type="email"
+                       class="form-control"
+                       placeholder="Correo electrónico"
+                       autocomplete="email"
+                       maxlength="150"
+                       aria-describedby="emailHelp" />
+
+                <label for="Email" class="form-label">
+                    @Html.DisplayNameFor(model => model.Email)
+                </label>
+
+                <span asp-validation-for="Email" class="text-danger"></span>
+
+                <div id="emailHelp" class="form-text small">
+                    Ingrese un correo electrónico válido.
+                </div>
+            </div>
+
+            <div class="form-floating mb-3">
+                <input asp-for="Nombre"
+                       id="Nombre"
+                       type="text"
+                       class="form-control"
+                       placeholder="Nombre"
+                       autocomplete="name"
+                       maxlength="120"
+                       aria-describedby="nombreHelp" />
+
+                <label for="Nombre" class="form-label">
+                    @Html.DisplayNameFor(model => model.Nombre)
+                </label>
+
+                <span asp-validation-for="Nombre" class="text-danger"></span>
+
+                <div id="nombreHelp" class="form-text small">
+                    Ingrese su nombre completo.
+                </div>
+            </div>
+
+            <div class="form-floating mb-3">
+                <input asp-for="Password"
+                       id="Password"
+                       type="password"
+                       class="form-control"
+                       placeholder="Contraseña"
+                       autocomplete="new-password"
+                       maxlength="72"
+                       aria-describedby="passwordHelp" />
+
+                <label for="Password" class="form-label">
+                    @Html.DisplayNameFor(model => model.Password)
+                </label>
+
+                <span asp-validation-for="Password" class="text-danger"></span>
+
+                <div id="passwordHelp" class="form-text small">
+                    Mínimo 8 caracteres, debe incluir mayúscula, minúscula, número y carácter especial.
+                </div>
+            </div>
+
+            <div class="form-floating mb-3">
+                <input asp-for="ConfirmarPassword"
+                       id="ConfirmarPassword"
+                       type="password"
+                       class="form-control"
+                       placeholder="Confirmar contraseña"
+                       autocomplete="new-password"
+                       maxlength="72" />
+
+                <label for="ConfirmarPassword" class="form-label">
+                    @Html.DisplayNameFor(model => model.ConfirmarPassword)
+                </label>
+
+                <span asp-validation-for="ConfirmarPassword" class="text-danger"></span>
+            </div>
+
+            <p class="card-text small text-end">
+                <a asp-controller="Auth"
+                   asp-action="Index"
+                   class="link-primary text-decoration-none">
+                    ¿Ya tienes cuenta? Iniciar sesión
+                </a>
+            </p>
+        </div>
+
+        <div class="card-footer text-center">
+            <button type="submit" class="btn btn-primary">
+                Crear cuenta
+            </button>
+        </div>
+    </div>
+</form>

@@ -1,0 +1,166 @@
+@model IEnumerable<Archivo>
+
+@{
+    ViewData["Title"] = "Archivos";
+    ViewData["SubTitle"] = "Listado";
+
+    var archivos = Model?.ToList() ?? [];
+    var configuredUrl = Convert.ToString(ViewBag.Url);
+    Uri? baseUri = null;
+    var hasValidBaseUrl = Uri.TryCreate(configuredUrl, UriKind.Absolute, out baseUri);
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb small">
+        <li class="breadcrumb-item active" aria-current="page">
+            @ViewData["SubTitle"]
+        </li>
+    </ol>
+</nav>
+
+<h2 class="text-center mb-3">
+    @ViewData["Title"]
+    <small class="text-muted fs-5">@ViewData["SubTitle"]</small>
+</h2>
+
+<div class="text-end mb-3">
+    <a class="btn btn-sm btn-primary"
+       asp-action="Crear"
+       title="Crear nuevo archivo">
+        Crear nuevo
+    </a>
+</div>
+
+<div class="row small mb-3">
+    <div class="col text-end">
+        Mostrando @archivos.Count elementos
+    </div>
+</div>
+
+@if (archivos.Count > 0)
+{
+    <div class="table-responsive">
+        <table class="table table-striped table-bordered align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">
+                        Id
+                    </th>
+                    <th scope="col">
+                        Portada
+                    </th>
+                    <th scope="col">
+                        Nombre
+                    </th>
+                    <th scope="col">
+                        MIME
+                    </th>
+                    <th scope="col">
+                        Tamaño
+                    </th>
+                    <th scope="col">
+                        Repositorio
+                    </th>
+                    <th scope="col" class="text-center">
+                        Acciones
+                    </th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var item in archivos)
+                {
+                    var hasValidId = item.ArchivoId.HasValue && item.ArchivoId.Value > 0;
+
+                    var fileName = string.IsNullOrWhiteSpace(item.Nombre)
+                        ? "Archivo sin nombre"
+                        : item.Nombre;
+
+                    var mime = string.IsNullOrWhiteSpace(item.Mime)
+                        ? "No disponible"
+                        : item.Mime;
+
+                    var sizeKb = item.Size is > 0
+                        ? $"{item.Size.Value / 1024:N0} KB"
+                        : "No disponible";
+
+                    var storage = item.InDb
+                        ? "Base de datos"
+                        : "Archivos";
+
+                    var imageUrl = hasValidId && hasValidBaseUrl
+                        ? $"{baseUri!.ToString().TrimEnd('/')}/api/archivos/{item.ArchivoId!.Value}"
+                        : Url.Content("~/images/logo.png");
+
+                    <tr>
+                        <td>
+                            @(hasValidId ? item.ArchivoId!.Value.ToString() : "No disponible")
+                        </td>
+
+                        <td class="text-center">
+                            <img src="@imageUrl"
+                                 alt="@fileName"
+                                 class="img-fluid img-thumbnail archivo-list-img"
+                                 loading="lazy"
+                                 decoding="async">
+                        </td>
+
+                        <td>
+                            @fileName
+                        </td>
+
+                        <td>
+                            @mime
+                        </td>
+
+                        <td>
+                            @sizeKb
+                        </td>
+
+                        <td>
+                            @storage
+                        </td>
+
+                        <td class="text-center">
+                            @if (hasValidId)
+                            {
+                                <a class="btn btn-sm btn-outline-secondary"
+                                   asp-action="Detalle"
+                                   asp-route-id="@item.ArchivoId"
+                                   title="Ver detalle">
+                                    Detalle
+                                </a>
+
+                                <a class="btn btn-sm btn-outline-primary"
+                                   asp-action="Editar"
+                                   asp-route-id="@item.ArchivoId"
+                                   title="Editar archivo">
+                                    Editar
+                                </a>
+
+                                <a class="btn btn-sm btn-outline-danger"
+                                   asp-action="Eliminar"
+                                   asp-route-id="@item.ArchivoId"
+                                   title="Eliminar archivo">
+                                    Eliminar
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="text-muted">
+                                    Sin acciones
+                                </span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <div class="alert alert-warning" role="alert">
+        No se encontraron elementos. Inténtelo de nuevo más tarde.
+    </div>
+}

@@ -1,6 +1,52 @@
+## .NET / ASP.NET Core MVC — .gitignore
+
+# Directorios de salida del compilador
 bin/
 obj/
-node_modules/
+
+# Visual Studio
 .vs/
 *.user
 *.suo
+*.rsuser
+*.sln.docstates
+
+# VS Code (solo configuración local, no extensiones del equipo)
+.vscode/launch.json
+.vscode/tasks.json
+
+# Riders / JetBrains
+.idea/
+*.DotSettings.user
+
+# Archivos de log
+*.log
+*.log.*
+
+# Resultados de pruebas y cobertura
+TestResults/
+coverage/
+*.trx
+*.coveragexml
+*.coverage
+
+# Publicación
+publish/
+**/publish/
+
+# NuGet
+*.nupkg
+*.snupkg
+
+# Archivos temporales del sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+
+# Configuración local (nunca subir secretos)
+appsettings.Local.json
+appsettings.*.Local.json
+.env
+.env.*
+secrets.json

@@ -1,32 +1,48 @@
 using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Mvc;
+using System.Text.Json.Serialization;
+using frontendnet.Models.Validation;
 
 namespace frontendnet.Models;
 
 public class Producto
 {
-    [Display(Name = "Id")]
-    public int? ProductoId { get; set; }
+    [Display(Name = ProductValidation.IdDisplayName)]
+    [JsonPropertyName("id")]
+    public int ProductoId { get; set; }
 
-    [Required(ErrorMessage = "El campo {0} es obligatorio.")]
+    [Required(ErrorMessage = ProductValidation.RequiredMessage)]
+    [StringLength(ProductValidation.TitleMaxLength, ErrorMessage = ProductValidation.MaxLengthMessage)]
+    [Display(Name = ProductValidation.TitleDisplayName)]
+    [JsonPropertyName("titulo")]
     public required string Titulo { get; set; }
 
-    [Required(ErrorMessage = "El campo {0} es obligatorio.")]
+    [Required(ErrorMessage = ProductValidation.RequiredMessage)]
+    [StringLength(ProductValidation.DescriptionMaxLength, ErrorMessage = ProductValidation.MaxLengthMessage)]
     [DataType(DataType.MultilineText)]
-    public string Descripcion { get; set; } = "Sin descripción";
+    [Display(Name = ProductValidation.DescriptionDisplayName)]
+    [JsonPropertyName("descripcion")]
+    public required string Descripcion { get; set; }
 
-    [Required(ErrorMessage = "El campo {0} es obligatorio.")]
+    [Range(
+        typeof(decimal),
+        ProductValidation.PriceMinValue,
+        ProductValidation.PriceMaxValue,
+        ErrorMessage = ProductValidation.PriceRangeMessage
+    )]
     [DataType(DataType.Currency)]
-    [RegularExpression(@"^\d+.?\d{0,2}$", ErrorMessage = "El valor del campo debe ser un precio válido.")]
     [DisplayFormat(DataFormatString = "{0:C}", ApplyFormatInEditMode = false)]
-    [Display(Name = "Precio")]
+    [Display(Name = ProductValidation.PriceDisplayName)]
+    [JsonPropertyName("precio")]
     public decimal Precio { get; set; }
 
-    [Display(Name = "Portada")]
+    [Display(Name = ProductValidation.CoverDisplayName)]
+    [JsonPropertyName("archivoid")]
     public int? ArchivoId { get; set; }
 
-    [Display(Name = "Eliminable")]
+    [Display(Name = ProductValidation.DeletableDisplayName)]
+    [JsonPropertyName("protegida")]
     public bool Protegida { get; set; } = false;
 
+    [JsonPropertyName("categorias")]
     public ICollection<Categoria>? Categorias { get; set; }
 }
