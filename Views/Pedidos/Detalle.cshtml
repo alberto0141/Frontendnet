@@ -147,10 +147,11 @@
                   class="d-flex align-items-center gap-2 flex-wrap"
                   autocomplete="off">
                 @Html.AntiForgeryToken()
+                <label for="select-estado-@Model.Id" class="mb-0">Estado</label>
                 <select name="estado"
+                        id="select-estado-@Model.Id"
                         class="form-select form-select-sm"
-                        style="max-width: 200px;"
-                        aria-label="Seleccionar nuevo estado">
+                        style="max-width: 200px;">
                     @foreach (var estado in PedidoEstados.Todos)
                     {
                         if (estado == Model.Estado)

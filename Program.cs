@@ -152,10 +152,10 @@ app.Use(async (context, next) =>
     context.Response.Headers.TryAdd(
         "Content-Security-Policy",
         $"default-src 'self'; " +
-        $"script-src 'self' https://cdnjs.cloudflare.com; " +
-        $"style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; " +
+        $"script-src 'self'; " +
+        $"style-src 'self' 'unsafe-inline'; " +
         $"img-src 'self' data: {apiOrigin}; " +
-        $"font-src 'self' https://cdn.jsdelivr.net; " +
+        $"font-src 'self'; " +
         $"connect-src 'self' {apiOrigin}; " +
         $"object-src 'none'; " +
         $"frame-ancestors 'none'; " +
