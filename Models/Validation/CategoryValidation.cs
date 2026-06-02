@@ -9,6 +9,7 @@ public static class CategoryValidation
     public const string LengthMessage = "El campo {0} debe tener entre {2} y {1} caracteres.";
     public const string InvalidIdMessage = "El identificador debe ser válido.";
     public const string InvalidNameMessage = "El campo {0} no puede estar vacío.";
+    public const string InvalidCharsMessage = "El nombre solo puede contener letras, números, espacios, punto, coma y guion. No use paréntesis ni caracteres especiales.";
 
     public const string IdDisplayName = "Id";
     public const string NameDisplayName = "Nombre";

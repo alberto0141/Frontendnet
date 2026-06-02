@@ -12,12 +12,12 @@ public class UsuariosClientService(HttpClient client)
         CancellationToken cancellationToken = default
     )
     {
-        var usuarios = await client.GetFromJsonAsync<List<Usuario>>(
+        var paginado = await client.GetFromJsonAsync<ApiPagedResponse<Usuario>>(
             ApiRoutes.Users,
             cancellationToken
         );
 
-        return usuarios ?? [];
+        return paginado?.Data ?? [];
     }
 
     public async Task<Usuario?> GetAsync(
@@ -56,13 +56,13 @@ public class UsuariosClientService(HttpClient client)
     {
         ValidateUsuario(usuario);
 
-        var response = await client.PutAsJsonAsync(
+        using var response = await client.PutAsJsonAsync(
             ApiRoutes.UserByEmail(usuario.Email),
-            usuario,
+            new { nombre = usuario.Nombre, rol = usuario.Rol },
             cancellationToken
         );
 
-        response.EnsureSuccessStatusCode();
+        await ApiClientHelper.LanzarSiErrorAsync(response, cancellationToken);
     }
 
     public async Task DeleteAsync(

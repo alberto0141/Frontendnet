@@ -16,10 +16,10 @@ public class BitacoraClientService(HttpClient client)
 
         response.EnsureSuccessStatusCode();
 
-        var bitacora = await response.Content.ReadFromJsonAsync<List<Bitacora>>(
+        var paginado = await response.Content.ReadFromJsonAsync<ApiPagedResponse<Bitacora>>(
             cancellationToken
         );
 
-        return bitacora ?? [];
+        return paginado?.Data ?? [];
     }
 }

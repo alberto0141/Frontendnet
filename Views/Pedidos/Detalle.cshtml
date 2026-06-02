@@ -1,0 +1,173 @@
+@model Pedido
+@using frontendnet.Security
+
+@{
+    ViewData["Title"] = "Pedido #" + Model.Id;
+    ViewData["SubTitle"] = "Detalle";
+
+    var isAdmin = User.IsInRole(AppRoles.Administrator);
+
+    var msgExito = TempData["Exito"] as string;
+    var msgError  = TempData["Error"] as string;
+
+    static string FormatFecha(DateTime fecha) => fecha.ToString("dd/MM/yyyy HH:mm");
+
+    static string BadgeClase(string estado) => estado switch
+    {
+        "PENDIENTE"  => "bg-warning text-dark",
+        "EN_PROCESO" => "bg-info text-dark",
+        "ENVIADO"    => "bg-primary",
+        "ENTREGADO"  => "bg-success",
+        "CANCELADO"  => "bg-danger",
+        _            => "bg-secondary"
+    };
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb small">
+        <li class="breadcrumb-item">
+            @if (isAdmin)
+            {
+                <a asp-controller="Pedidos" asp-action="AdminIndex">Pedidos</a>
+            }
+            else
+            {
+                <a asp-controller="Pedidos" asp-action="Index">Mis pedidos</a>
+            }
+        </li>
+        <li class="breadcrumb-item active" aria-current="page">Detalle</li>
+    </ol>
+</nav>
+
+<h2 class="text-center mb-3">
+    @ViewData["Title"]
+    <small class="text-muted fs-5">@ViewData["SubTitle"]</small>
+</h2>
+
+@if (!string.IsNullOrEmpty(msgExito))
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @msgExito
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(msgError))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @msgError
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+    </div>
+}
+
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <p class="card-title text-muted small mb-1">Estado</p>
+                <span class="badge fs-6 @BadgeClase(Model.Estado)">@Model.Estado</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <p class="card-title text-muted small mb-1">Total</p>
+                <p class="fw-bold fs-5 mb-0">@Model.Total.ToString("C")</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <p class="card-title text-muted small mb-1">Fecha</p>
+                <p class="mb-0 small">@FormatFecha(Model.CreadoEn)</p>
+            </div>
+        </div>
+    </div>
+    @if (isAdmin && !string.IsNullOrWhiteSpace(Model.EmailUsuario))
+    {
+        <div class="col-sm-6 col-md-3">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <p class="card-title text-muted small mb-1">Usuario</p>
+                    <p class="mb-0 small text-break">@Model.EmailUsuario</p>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@if (Model.Detalles.Count > 0)
+{
+    <h5 class="mb-3">Productos</h5>
+
+    <div class="table-responsive mb-4">
+        <table class="table table-hover align-middle small">
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">Producto</th>
+                    <th scope="col" class="text-end">Precio unit.</th>
+                    <th scope="col" class="text-center">Cantidad</th>
+                    <th scope="col" class="text-end">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var detalle in Model.Detalles)
+                {
+                    <tr>
+                        <td>@detalle.Titulo</td>
+                        <td class="text-end text-nowrap">@detalle.PrecioUnitario.ToString("C")</td>
+                        <td class="text-center">@detalle.Cantidad</td>
+                        <td class="text-end text-nowrap fw-semibold">@detalle.Subtotal.ToString("C")</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr class="table-light">
+                    <td colspan="3" class="text-end fw-bold">Total</td>
+                    <td class="text-end text-nowrap fw-bold fs-5">@Model.Total.ToString("C")</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+}
+
+@if (isAdmin)
+{
+    <div class="card mb-4">
+        <div class="card-header fw-semibold">
+            Cambiar estado
+        </div>
+        <div class="card-body">
+            <form asp-controller="Pedidos"
+                  asp-action="CambiarEstado"
+                  asp-route-id="@Model.Id"
+                  method="post"
+                  class="d-flex align-items-center gap-2 flex-wrap"
+                  autocomplete="off">
+                @Html.AntiForgeryToken()
+                <select name="estado"
+                        class="form-select form-select-sm"
+                        style="max-width: 200px;"
+                        aria-label="Seleccionar nuevo estado">
+                    @foreach (var estado in PedidoEstados.Todos)
+                    {
+                        if (estado == Model.Estado)
+                        {
+                            <option value="@estado" selected>@estado</option>
+                        }
+                        else
+                        {
+                            <option value="@estado">@estado</option>
+                        }
+                    }
+                </select>
+                <button type="submit" class="btn btn-sm btn-primary">
+                    <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+                    Actualizar estado
+                </button>
+            </form>
+        </div>
+    </div>
+}

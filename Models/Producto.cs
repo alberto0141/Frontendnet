@@ -12,12 +12,14 @@ public class Producto
 
     [Required(ErrorMessage = ProductValidation.RequiredMessage)]
     [StringLength(ProductValidation.TitleMaxLength, ErrorMessage = ProductValidation.MaxLengthMessage)]
+    [RegularExpression(@"^[^<>]+$", ErrorMessage = ProductValidation.NoHtmlCharsMessage)]
     [Display(Name = ProductValidation.TitleDisplayName)]
     [JsonPropertyName("titulo")]
     public required string Titulo { get; set; }
 
     [Required(ErrorMessage = ProductValidation.RequiredMessage)]
     [StringLength(ProductValidation.DescriptionMaxLength, ErrorMessage = ProductValidation.MaxLengthMessage)]
+    [RegularExpression(@"^[^<>]+$", ErrorMessage = ProductValidation.NoHtmlCharsMessage)]
     [DataType(DataType.MultilineText)]
     [Display(Name = ProductValidation.DescriptionDisplayName)]
     [JsonPropertyName("descripcion")]

@@ -11,12 +11,12 @@ public class ArchivosClientService(HttpClient client)
         CancellationToken cancellationToken = default
     )
     {
-        var archivos = await client.GetFromJsonAsync<List<Archivo>>(
+        var paginado = await client.GetFromJsonAsync<ApiPagedResponse<Archivo>>(
             ApiRoutes.Files,
             cancellationToken
         );
 
-        return archivos ?? [];
+        return paginado?.Data ?? [];
     }
 
     public async Task<Archivo?> GetAsync(
@@ -41,13 +41,13 @@ public class ArchivosClientService(HttpClient client)
 
         using var form = CreateMultipartContent(archivo);
 
-        var response = await client.PostAsync(
+        using var response = await client.PostAsync(
             ApiRoutes.Files,
             form,
             cancellationToken
         );
 
-        response.EnsureSuccessStatusCode();
+        await ApiClientHelper.LanzarSiErrorAsync(response, cancellationToken);
     }
 
     public async Task PutAsync(
@@ -144,4 +144,5 @@ public class ArchivosClientService(HttpClient client)
             );
         }
     }
+
 }

@@ -11,6 +11,7 @@ public static class ProductValidation
     public const string RequiredMessage = "El campo {0} es obligatorio.";
     public const string MaxLengthMessage = "El campo {0} no puede exceder {1} caracteres.";
     public const string PriceRangeMessage = "El campo {0} debe ser mayor a 0 y tener un valor válido.";
+    public const string NoHtmlCharsMessage = "El campo {0} no puede contener los caracteres < o >.";
 
     public const string IdDisplayName = "Id";
     public const string TitleDisplayName = "Título";

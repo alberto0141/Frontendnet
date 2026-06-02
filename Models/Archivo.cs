@@ -1,10 +1,12 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using frontendnet.Models.Validation;
 
 namespace frontendnet.Models;
 
 public class Archivo
 {
+    [JsonPropertyName("id")]
     [Display(Name = FileValidation.IdDisplayName)]
     [Range(1, int.MaxValue, ErrorMessage = FileValidation.InvalidIdMessage)]
     public int? ArchivoId { get; set; }

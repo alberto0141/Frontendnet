@@ -1,10 +1,11 @@
-@model IEnumerable<Producto>
+@model ResumenCarrito
 
 @{
     ViewData["Title"] = "Carrito de compras";
-    ViewData["SubTitle"] = "Listado";
+    ViewData["SubTitle"] = "Mi carrito";
 
-    var productos = Model?.Where(producto => producto is not null).ToList() ?? [];
+    var msgExito = TempData["Exito"] as string;
+    var msgError = TempData["Error"] as string;
 }
 
 <h2 class="text-center mb-3">
@@ -12,28 +13,158 @@
     <small class="text-muted fs-5">@ViewData["SubTitle"]</small>
 </h2>
 
-<div class="row small mb-3">
-    <div class="col text-end">
-        Mostrando @productos.Count elementos
-    </div>
-</div>
-
-@if (productos.Count > 0)
+@if (!string.IsNullOrEmpty(msgExito))
 {
-    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
-        @foreach (var item in productos)
-        {
-            <div class="col">
-                <partial name="_CardPartial" model="item" />
-            </div>
-        }
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @msgExito
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(msgError))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @msgError
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+    </div>
+}
+
+@if (Model.Items.Count > 0)
+{
+    <div class="row small mb-2">
+        <div class="col text-end text-muted">
+            @Model.TotalProductos producto(s) en el carrito
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">Producto</th>
+                    <th scope="col" class="text-end">Precio unit.</th>
+                    <th scope="col" class="text-center" style="min-width: 120px;">Cantidad</th>
+                    <th scope="col" class="text-end">Subtotal</th>
+                    <th scope="col"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.Items)
+                {
+                    <tr>
+                        <td>@item.Titulo</td>
+                        <td class="text-end text-nowrap">@item.Precio.ToString("C")</td>
+                        <td class="text-center">
+                            <div class="d-inline-flex align-items-center">
+                                <form asp-controller="Carrito"
+                                      asp-action="Decrementar"
+                                      asp-route-id="@item.ProductoId"
+                                      method="post"
+                                      autocomplete="off">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit"
+                                            class="btn btn-sm btn-outline-secondary"
+                                            @(item.Cantidad <= 1 ? "disabled" : "")
+                                            aria-label="Disminuir cantidad de @item.Titulo">
+                                        <i class="bi bi-dash" aria-hidden="true"></i>
+                                    </button>
+                                </form>
+
+                                <span class="px-2 fw-semibold text-center"
+                                      style="min-width: 2rem;"
+                                      aria-live="polite">
+                                    @item.Cantidad
+                                </span>
+
+                                <form asp-controller="Carrito"
+                                      asp-action="Incrementar"
+                                      asp-route-id="@item.ProductoId"
+                                      method="post"
+                                      autocomplete="off">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit"
+                                            class="btn btn-sm btn-outline-secondary"
+                                            @(item.Cantidad >= 99 ? "disabled" : "")
+                                            aria-label="Aumentar cantidad de @item.Titulo">
+                                        <i class="bi bi-plus" aria-hidden="true"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                        <td class="text-end text-nowrap fw-semibold">@item.Subtotal.ToString("C")</td>
+                        <td class="text-center">
+                            <form asp-controller="Carrito"
+                                  asp-action="Eliminar"
+                                  asp-route-id="@item.ProductoId"
+                                  method="post"
+                                  autocomplete="off">
+                                @Html.AntiForgeryToken()
+                                <button type="submit"
+                                        class="btn btn-sm btn-outline-danger"
+                                        title="Eliminar @item.Titulo del carrito">
+                                    <i class="bi bi-trash" aria-hidden="true"></i>
+                                    <span class="visually-hidden">Eliminar</span>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr class="table-light">
+                    <td colspan="3" class="text-end fw-bold">Total</td>
+                    <td class="text-end text-nowrap fw-bold fs-5">@Model.Total.ToString("C")</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
+        <form asp-controller="Carrito"
+              asp-action="Vaciar"
+              method="post"
+              autocomplete="off">
+            @Html.AntiForgeryToken()
+            <button type="submit"
+                    class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-cart-x" aria-hidden="true"></i>
+                Vaciar carrito
+            </button>
+        </form>
+
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+            <a asp-controller="Comprar"
+               asp-action="Index"
+               class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left" aria-hidden="true"></i>
+                Seguir comprando
+            </a>
+
+            <form asp-controller="Carrito"
+                  asp-action="ConfirmarCompra"
+                  method="post"
+                  autocomplete="off">
+                @Html.AntiForgeryToken()
+                <button type="submit"
+                        class="btn btn-sm btn-success">
+                    <i class="bi bi-bag-check" aria-hidden="true"></i>
+                    Confirmar compra
+                </button>
+            </form>
+        </div>
     </div>
 }
 else
 {
     <div class="mt-5">
-        <div class="alert alert-warning" role="alert">
-            No se han encontrado elementos. Inténtelo de nuevo más tarde.
+        <div class="alert alert-info" role="alert">
+            Tu carrito está vacío.
+            <a asp-controller="Comprar"
+               asp-action="Index"
+               class="alert-link">
+                ¡Empieza a comprar!
+            </a>
         </div>
     </div>
 }

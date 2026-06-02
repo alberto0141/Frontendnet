@@ -142,6 +142,12 @@ public class ArchivosController(
         {
             return Forbid();
         }
+        catch (ApiClientException ex)
+        {
+            logger.LogError(ex, "Backend rechazó la creación del archivo.");
+            ApiErrorHelper.AgregarErrores(ModelState, ex, nameof(Upload.Portada), ErrorMessages.GenericActionError);
+            return View(itemToCreate);
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error al crear un archivo.");
@@ -241,6 +247,12 @@ public class ArchivosController(
         catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
         {
             return Forbid();
+        }
+        catch (ApiClientException ex)
+        {
+            logger.LogError(ex, "Backend rechazó la edición del archivo {ArchivoId}.", id);
+            ApiErrorHelper.AgregarErrores(ModelState, ex, nameof(Upload.Portada), ErrorMessages.GenericActionError);
+            return View(itemToEdit);
         }
         catch (Exception ex)
         {

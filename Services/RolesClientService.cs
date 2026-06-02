@@ -16,10 +16,10 @@ public class RolesClientService(HttpClient client)
 
         response.EnsureSuccessStatusCode();
 
-        var roles = await response.Content.ReadFromJsonAsync<List<Rol>>(
+        var paginado = await response.Content.ReadFromJsonAsync<ApiPagedResponse<Rol>>(
             cancellationToken
         );
 
-        return roles ?? [];
+        return paginado?.Data ?? [];
     }
 }

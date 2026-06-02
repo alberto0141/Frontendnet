@@ -1,0 +1,77 @@
+@model Producto
+
+@{
+    static string SafeText(string? value, int maxLength = 160)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "No disponible";
+        var v = value.Trim();
+        return v.Length > maxLength ? $"{v[..maxLength]}..." : v;
+    }
+
+    var hasValidProduct = Model is not null && Model.ProductoId > 0;
+    var title = SafeText(Model?.Titulo, 120);
+    var description = SafeText(Model?.Descripcion, 500);
+    var price = Model?.Precio is > 0 ? Model.Precio.ToString("C") : "No disponible";
+
+    var configuredUrl = Convert.ToString(ViewBag.Url);
+    Uri? baseUri = null;
+    var hasValidBaseUrl = Uri.TryCreate(configuredUrl, UriKind.Absolute, out baseUri);
+    var hasValidFile = Model?.ArchivoId is > 0;
+
+    var imageUrl = hasValidProduct && hasValidFile && hasValidBaseUrl
+        ? $"{baseUri!.ToString().TrimEnd('/')}/api/archivos/{Model!.ArchivoId}"
+        : Url.Content("~/images/logo.png");
+}
+
+<div class="card mt-3">
+    <div class="card-body">
+        @if (!hasValidProduct)
+        {
+            <div class="alert alert-warning mb-0" role="alert">
+                No fue posible cargar la información del producto.
+            </div>
+        }
+        else
+        {
+            <div class="row g-0">
+                <div class="col-md-3 text-center p-2">
+                    <img src="@imageUrl"
+                         alt="@title"
+                         class="img-fluid img-thumbnail producto-form-img"
+                         loading="lazy"
+                         decoding="async">
+                </div>
+
+                <div class="col-md-9">
+                    <div class="mb-2 ps-3">
+                        <span class="form-label form-text d-block">
+                            @Html.DisplayNameFor(model => model.ProductoId)
+                        </span>
+                        <div class="form-text text-body">@Model!.ProductoId</div>
+                    </div>
+
+                    <div class="mb-2 ps-3">
+                        <span class="form-label form-text d-block">
+                            @Html.DisplayNameFor(model => model.Titulo)
+                        </span>
+                        <div class="form-text text-body" title="@SafeText(Model.Titulo, 500)">@title</div>
+                    </div>
+
+                    <div class="mb-2 ps-3">
+                        <span class="form-label form-text d-block">
+                            @Html.DisplayNameFor(model => model.Descripcion)
+                        </span>
+                        <div class="form-text text-body" title="@SafeText(Model.Descripcion, 1000)">@description</div>
+                    </div>
+
+                    <div class="mb-2 ps-3">
+                        <span class="form-label form-text d-block">
+                            @Html.DisplayNameFor(model => model.Precio)
+                        </span>
+                        <div class="form-text text-body">@price</div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>

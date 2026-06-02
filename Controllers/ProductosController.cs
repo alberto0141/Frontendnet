@@ -174,6 +174,13 @@ public class ProductosController(
         {
             return Forbid();
         }
+        catch (ApiClientException ex)
+        {
+            logger.LogError(ex, "Backend rechazó la creación del producto.");
+            ApiErrorHelper.AgregarErrores(ModelState, ex, nameof(Producto.Titulo), ErrorMessages.GenericActionError);
+            await ArchivosDropDownListAsync(itemToCreate.ArchivoId, cancellationToken);
+            return View(itemToCreate);
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error al crear producto.");
@@ -269,6 +276,13 @@ public class ProductosController(
         catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
         {
             return Forbid();
+        }
+        catch (ApiClientException ex)
+        {
+            logger.LogError(ex, "Backend rechazó la edición del producto {ProductoId}.", id);
+            ApiErrorHelper.AgregarErrores(ModelState, ex, nameof(Producto.Titulo), ErrorMessages.GenericActionError);
+            await ArchivosDropDownListAsync(itemToEdit.ArchivoId, cancellationToken);
+            return View(itemToEdit);
         }
         catch (Exception ex)
         {

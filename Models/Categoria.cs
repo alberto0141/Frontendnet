@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using frontendnet.Models.Validation;
 
 namespace frontendnet.Models;
@@ -7,6 +8,7 @@ public class Categoria
 {
     private string _nombre = string.Empty;
 
+    [JsonPropertyName("id")]
     [Display(Name = CategoryValidation.IdDisplayName)]
     [Range(1, int.MaxValue, ErrorMessage = CategoryValidation.InvalidIdMessage)]
     public int? CategoriaId { get; set; }
@@ -17,7 +19,10 @@ public class Categoria
         MinimumLength = CategoryValidation.NameMinLength,
         ErrorMessage = CategoryValidation.LengthMessage
     )]
-    [RegularExpression(@"\S.*", ErrorMessage = CategoryValidation.InvalidNameMessage)]
+    [RegularExpression(
+        @"^[a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s.,-]+$",
+        ErrorMessage = CategoryValidation.InvalidCharsMessage
+    )]
     [Display(Name = CategoryValidation.NameDisplayName)]
     public required string Nombre
     {

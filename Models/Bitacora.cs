@@ -1,10 +1,12 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using frontendnet.Models.Validation;
 
 namespace frontendnet.Models;
 
 public class Bitacora
 {
+    [JsonPropertyName("id")]
     [Display(Name = AuditLogValidation.IdDisplayName)]
     [Range(1, int.MaxValue, ErrorMessage = AuditLogValidation.InvalidIdMessage)]
     public int? BitacoraId { get; set; }

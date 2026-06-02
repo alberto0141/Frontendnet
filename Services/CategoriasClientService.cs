@@ -7,12 +7,12 @@ public class CategoriasClientService(HttpClient client)
 {
     public async Task<List<Categoria>> GetAsync(CancellationToken cancellationToken = default)
     {
-        var categorias = await client.GetFromJsonAsync<List<Categoria>>(
+        var paginado = await client.GetFromJsonAsync<ApiPagedResponse<Categoria>>(
             ApiRoutes.Categories,
             cancellationToken
         );
 
-        return categorias ?? [];
+        return paginado?.Data ?? [];
     }
 
     public async Task<Categoria?> GetAsync(int id, CancellationToken cancellationToken = default)
@@ -29,13 +29,13 @@ public class CategoriasClientService(HttpClient client)
     {
         ValidateCategoria(categoria);
 
-        var response = await client.PostAsJsonAsync(
+        using var response = await client.PostAsJsonAsync(
             ApiRoutes.Categories,
-            categoria,
+            new { nombre = categoria.Nombre },
             cancellationToken
         );
 
-        response.EnsureSuccessStatusCode();
+        await ApiClientHelper.LanzarSiErrorAsync(response, cancellationToken);
     }
 
     public async Task PutAsync(Categoria categoria, CancellationToken cancellationToken = default)
@@ -49,13 +49,13 @@ public class CategoriasClientService(HttpClient client)
 
         ValidateId(categoria.CategoriaId.Value);
 
-        var response = await client.PutAsJsonAsync(
+        using var response = await client.PutAsJsonAsync(
             ApiRoutes.CategoryById(categoria.CategoriaId.Value),
-            categoria,
+            new { nombre = categoria.Nombre },
             cancellationToken
         );
 
-        response.EnsureSuccessStatusCode();
+        await ApiClientHelper.LanzarSiErrorAsync(response, cancellationToken);
     }
 
     public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
@@ -89,4 +89,5 @@ public class CategoriasClientService(HttpClient client)
 
         categoria.Nombre = categoria.Nombre.Trim();
     }
+
 }

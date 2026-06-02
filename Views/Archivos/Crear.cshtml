@@ -53,7 +53,7 @@
                     <div class="form-floating mb-3">
                         <input asp-for="Portada"
                                type="file"
-                               accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                               accept=".jpg,.jpeg,image/jpeg"
                                class="form-control"
                                aria-describedby="portadaHelp" />
 
@@ -61,8 +61,7 @@
                         <span asp-validation-for="Portada" class="text-danger"></span>
 
                         <div id="portadaHelp" class="form-text small">
-                            Tamaño máximo permitido: 2 MB.
-                            Extensiones permitidas: JPG, JPEG, PNG y WebP.
+                            Tamaño máximo permitido: 2 MB. Solo se permiten imágenes JPG/JPEG.
                         </div>
                     </div>
                 </div>
