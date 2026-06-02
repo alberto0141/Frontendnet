@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.Http.Headers;
 using frontendnet.Middlewares;
 using frontendnet.Models.Validation;
@@ -8,6 +9,11 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var cultureInfo = new CultureInfo("es-MX");
+
+CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
+CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 
 var apiBaseUrl = builder.Configuration["UrlWebAPI"];
 
